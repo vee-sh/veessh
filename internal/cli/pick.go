@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -27,7 +28,10 @@ var cmdPick = &cobra.Command{
 	Use:   "pick",
 	Short: "Interactively pick a profile and connect",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfgPath, _ := config.DefaultPath()
+		cfgPath, err := config.DefaultPath()
+		if err != nil {
+			return fmt.Errorf("failed to determine config path: %w", err)
+		}
 		cfg, err := config.Load(cfgPath)
 		if err != nil {
 			return err
@@ -48,7 +52,20 @@ var cmdPick = &cobra.Command{
 			return err
 		}
 		password, _ := credentials.GetPassword(p.Name)
-		return conn.Exec(cmd.Context(), p, password)
+		if err := conn.Exec(cmd.Context(), p, password); err != nil {
+			if errors.Is(err, context.Canceled) {
+				return context.Canceled
+			}
+			return err
+		}
+		// Update usage tracking
+		p.LastUsed = time.Now()
+		p.UseCount++
+		cfg.UpsertProfile(p)
+		if err := config.Save(cfgPath, cfg); err != nil {
+			fmt.Printf("warning: failed to update usage stats: %v\n", err)
+		}
+		return nil
 	},
 }
 

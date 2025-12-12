@@ -16,7 +16,10 @@ var cmdFavorite = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		cfgPath, _ := config.DefaultPath()
+		cfgPath, err := config.DefaultPath()
+		if err != nil {
+			return fmt.Errorf("failed to determine config path: %w", err)
+		}
 		cfg, err := config.Load(cfgPath)
 		if err != nil {
 			return err

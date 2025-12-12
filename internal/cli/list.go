@@ -17,7 +17,10 @@ var cmdList = &cobra.Command{
 	Use:   "list",
 	Short: "List connection profiles",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfgPath, _ := config.DefaultPath()
+		cfgPath, err := config.DefaultPath()
+		if err != nil {
+			return fmt.Errorf("failed to determine config path: %w", err)
+		}
 		cfg, err := config.Load(cfgPath)
 		if err != nil {
 			return err

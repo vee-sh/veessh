@@ -145,6 +145,16 @@ func pickWithFZF(ctx context.Context, options []string) (string, error) {
 	cmd.Stdin = &in
 	out, err := cmd.Output()
 	if err != nil {
+		// Check if context was cancelled
+		if ctx.Err() != nil {
+			return "", context.Canceled
+		}
+		// fzf exits with code 130 on Ctrl+C, 1 on no match/escape
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			if exitErr.ExitCode() == 130 {
+				return "", context.Canceled
+			}
+		}
 		return "", err
 	}
 	scanner := bufio.NewScanner(bytes.NewReader(out))

@@ -20,7 +20,10 @@ var cmdExport = &cobra.Command{
 		if exportFile == "" {
 			return errors.New("--file is required")
 		}
-		cfgPath, _ := config.DefaultPath()
+		cfgPath, err := config.DefaultPath()
+		if err != nil {
+			return fmt.Errorf("failed to determine config path: %w", err)
+		}
 		cfg, err := config.Load(cfgPath)
 		if err != nil {
 			return err

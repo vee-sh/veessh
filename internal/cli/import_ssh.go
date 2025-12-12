@@ -1,10 +1,10 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/kevinburke/ssh_config"
@@ -40,7 +40,10 @@ var cmdImportSSH = &cobra.Command{
 			return err
 		}
 
-		cfgPath, _ := config.DefaultPath()
+		cfgPath, err := config.DefaultPath()
+		if err != nil {
+			return fmt.Errorf("failed to determine config path: %w", err)
+		}
 		cfg, err := config.Load(cfgPath)
 		if err != nil {
 			return err
@@ -73,7 +76,7 @@ var cmdImportSSH = &cobra.Command{
 					Description:  "imported from ssh config",
 				}
 				if port := get("Port"); port != "" {
-					if v, err := strconvAtoi(port); err == nil {
+					if v, err := strconv.Atoi(port); err == nil {
 						p.Port = v
 					}
 				}
@@ -123,14 +126,3 @@ func expandTilde(p string) string {
 	return p
 }
 
-func strconvAtoi(s string) (int, error) {
-	var n int
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if c < '0' || c > '9' {
-			return 0, errors.New("not a number")
-		}
-		n = n*10 + int(c-'0')
-	}
-	return n, nil
-}

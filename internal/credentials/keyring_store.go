@@ -6,7 +6,7 @@ import (
 	"github.com/99designs/keyring"
 )
 
-const serviceName = "sshmgr"
+const serviceName = "veessh"
 
 func openRing() (keyring.Keyring, error) {
 	return keyring.Open(keyring.Config{ServiceName: serviceName})
@@ -32,7 +32,11 @@ func GetPassword(profileName string) (string, error) {
 	}
 	it, err := r.Get(profileName + ":password")
 	if err != nil {
-		return "", nil
+		// keyring returns ErrKeyNotFound when key doesn't exist
+		if err == keyring.ErrKeyNotFound {
+			return "", nil
+		}
+		return "", err
 	}
 	return string(it.Data), nil
 }

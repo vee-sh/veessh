@@ -55,7 +55,7 @@ func DefaultPath() (string, error) {
 		}
 		cfgHome = filepath.Join(home, ".config")
 	}
-	return filepath.Join(cfgHome, "sshmgr", "config.yaml"), nil
+	return filepath.Join(cfgHome, "veessh", "config.yaml"), nil
 }
 
 func Load(path string) (Config, error) {
@@ -146,7 +146,7 @@ func (c *Config) ListProfiles() []Profile {
 	return list
 }
 
-func (p Profile) Validate() error {
+func (p *Profile) Validate() error {
 	if strings.TrimSpace(p.Name) == "" {
 		return errors.New("profile name is required")
 	}

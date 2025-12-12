@@ -1,13 +1,13 @@
 package cli
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	"github.com/alex-vee-sh/veessh/internal/config"
 	"github.com/alex-vee-sh/veessh/internal/credentials"
@@ -32,26 +32,29 @@ var cmdAdd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		cfgPath, _ := config.DefaultPath()
+		cfgPath, err := config.DefaultPath()
+		if err != nil {
+			return fmt.Errorf("failed to determine config path: %w", err)
+		}
 		cfg, err := config.Load(cfgPath)
 		if err != nil {
 			return err
 		}
-		p := config.Profile{
-			Name:         name,
-			Protocol:     config.Protocol(strings.ToLower(addProtocol)),
-			Host:         addHost,
-			Port:         addPort,
-			Username:     addUser,
-			IdentityFile: addIdentity,
-			UseAgent:     addUseAgent,
-			ExtraArgs:    addExtra,
-			Group:        addGroup,
-			Description:  addDesc,
-		}
-		if err := p.Validate(); err != nil {
-			return err
-		}
+	p := config.Profile{
+		Name:         name,
+		Protocol:     config.Protocol(strings.ToLower(addProtocol)),
+		Host:         addHost,
+		Port:         addPort,
+		Username:     addUser,
+		IdentityFile: addIdentity,
+		UseAgent:     addUseAgent,
+		ExtraArgs:    addExtra,
+		Group:        addGroup,
+		Description:  addDesc,
+	}
+	if err := (&p).Validate(); err != nil {
+		return err
+	}
 		cfg.UpsertProfile(p)
 		if err := config.Save(cfgPath, cfg); err != nil {
 			return err
@@ -87,12 +90,13 @@ func init() {
 
 func promptPassword(prompt string) (string, error) {
 	fmt.Fprint(os.Stderr, prompt)
-	reader := bufio.NewReader(os.Stdin)
-	s, err := reader.ReadString('\n')
+	fd := int(os.Stdin.Fd())
+	bytePassword, err := term.ReadPassword(fd)
+	fmt.Fprintln(os.Stderr) // newline after hidden input
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(s), nil
+	return strings.TrimSpace(string(bytePassword)), nil
 }
 
 func portString(p int) string {
