@@ -52,7 +52,19 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: veessh ${{ github.ref_name }}
           body: |
-            First automated release.
+            ## What's Changed
+            See [CHANGELOG](https://github.com/alex-vee-sh/veessh/blob/main/CHANGELOG.md) for details.
+            
+            ## Installation
+            
+            **Homebrew:**
+            ```bash
+            brew tap alex-vee-sh/tap
+            brew install veessh
+            ```
+            
+            **Manual:**
+            Download the appropriate archive for your platform below.
           draft: false
           prerelease: false
           files: |
@@ -64,3 +76,157 @@ jobs:
             dist/veessh_${{ github.ref_name }}_linux_amd64.tar.gz.sha256
             dist/veessh_${{ github.ref_name }}_linux_arm64.tar.gz
             dist/veessh_${{ github.ref_name }}_linux_arm64.tar.gz.sha256
+
+  # Sign macOS binaries (runs on macOS for codesign)
+  sign-macos:
+    needs: build-and-release
+    runs-on: macos-latest
+    steps:
+      - name: Download release artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p dist signed
+          for arch in amd64 arm64; do
+            name="veessh_${VERSION}_darwin_${arch}"
+            gh release download "$VERSION" \
+              --repo "${{ github.repository }}" \
+              --pattern "${name}.tar.gz" \
+              --dir dist
+          done
+
+      - name: Sign binaries (ad-hoc)
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          for arch in amd64 arm64; do
+            name="veessh_${VERSION}_darwin_${arch}"
+            # Extract
+            tar -xzf "dist/${name}.tar.gz" -C dist
+            # Ad-hoc sign with hardened runtime
+            codesign --sign - --force --options runtime "dist/${name}/veessh"
+            # Verify signature
+            codesign --verify --verbose "dist/${name}/veessh"
+            # Repackage
+            tar -C dist -czf "signed/${name}.tar.gz" "${name}"
+            shasum -a 256 "signed/${name}.tar.gz" | cut -d' ' -f1 > "signed/${name}.tar.gz.sha256"
+          done
+
+      - name: Upload signed artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          for arch in amd64 arm64; do
+            name="veessh_${VERSION}_darwin_${arch}"
+            # Delete old unsigned artifacts
+            gh release delete-asset "$VERSION" \
+              --repo "${{ github.repository }}" \
+              "${name}.tar.gz" --yes || true
+            gh release delete-asset "$VERSION" \
+              --repo "${{ github.repository }}" \
+              "${name}.tar.gz.sha256" --yes || true
+            # Upload signed versions
+            gh release upload "$VERSION" \
+              --repo "${{ github.repository }}" \
+              "signed/${name}.tar.gz" \
+              "signed/${name}.tar.gz.sha256"
+          done
+
+  # Update Homebrew tap
+  update-homebrew:
+    needs: sign-macos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tap repository
+        uses: actions/checkout@v4
+        with:
+          repository: alex-vee-sh/homebrew-tap
+          token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          path: homebrew-tap
+
+      - name: Download SHA256 files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          mkdir -p shasums
+          for platform in darwin_amd64 darwin_arm64 linux_amd64 linux_arm64; do
+            gh release download "$VERSION" \
+              --repo "${{ github.repository }}" \
+              --pattern "veessh_${VERSION}_${platform}.tar.gz.sha256" \
+              --dir shasums
+          done
+
+      - name: Update formula
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          # Strip 'v' prefix for version number
+          VER="${VERSION#v}"
+          
+          # Read SHA256 values
+          SHA_DARWIN_AMD64=$(cat shasums/veessh_${VERSION}_darwin_amd64.tar.gz.sha256 | cut -d' ' -f1)
+          SHA_DARWIN_ARM64=$(cat shasums/veessh_${VERSION}_darwin_arm64.tar.gz.sha256 | cut -d' ' -f1)
+          SHA_LINUX_AMD64=$(cat shasums/veessh_${VERSION}_linux_amd64.tar.gz.sha256 | cut -d' ' -f1)
+          SHA_LINUX_ARM64=$(cat shasums/veessh_${VERSION}_linux_arm64.tar.gz.sha256 | cut -d' ' -f1)
+          
+          # Create updated formula
+          cat > homebrew-tap/Formula/veessh.rb << EOF
+          # typed: false
+          # frozen_string_literal: true
+          
+          class Veessh < Formula
+            desc "Console connection manager for SSH/SFTP/Telnet/Mosh/SSM/GCloud"
+            homepage "https://github.com/alex-vee-sh/veessh"
+            version "${VER}"
+            license "Apache-2.0"
+          
+            on_macos do
+              on_intel do
+                url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_amd64.tar.gz"
+                sha256 "${SHA_DARWIN_AMD64}"
+              end
+          
+              on_arm do
+                url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_arm64.tar.gz"
+                sha256 "${SHA_DARWIN_ARM64}"
+              end
+            end
+          
+            on_linux do
+              on_intel do
+                url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_linux_amd64.tar.gz"
+                sha256 "${SHA_LINUX_AMD64}"
+              end
+          
+              on_arm do
+                url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_linux_arm64.tar.gz"
+                sha256 "${SHA_LINUX_ARM64}"
+              end
+            end
+          
+            def install
+              bin.install "veessh"
+          
+              # Install shell completions
+              generate_completions_from_executable(bin/"veessh", "completion")
+            end
+          
+            test do
+              assert_match version.to_s, shell_output("#{bin}/veessh --version")
+            end
+          end
+          EOF
+
+      - name: Commit and push formula
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/veessh.rb
+          git commit -m "veessh ${VERSION}" || echo "No changes to commit"
+          git push
