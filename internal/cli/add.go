@@ -14,25 +14,29 @@ import (
 )
 
 var (
-	addProtocol      string
-	addHost          string
-	addPort          int
-	addUser          string
-	addIdentity      string
-	addUseAgent      bool
-	addExtra         []string
-	addGroup         string
-	addDesc          string
-	addAskPass       bool
-	addRemoteCmd     string
-	addRemoteDir     string
-	addInstanceID    string
-	addAWSRegion     string
-	addAWSProfile    string
-	addTags          []string
-	addLocalForward  []string
-	addRemoteForward []string
+	addProtocol       string
+	addHost           string
+	addPort           int
+	addUser           string
+	addIdentity       string
+	addUseAgent       bool
+	addExtra          []string
+	addGroup          string
+	addDesc           string
+	addAskPass        bool
+	addRemoteCmd      string
+	addRemoteDir      string
+	addInstanceID     string
+	addAWSRegion      string
+	addAWSProfile     string
+	addTags           []string
+	addLocalForward   []string
+	addRemoteForward  []string
 	addDynamicForward []string
+	addGCPProject     string
+	addGCPZone        string
+	addGCPTunnel      bool
+	addExtends        string
 )
 
 var cmdAdd = &cobra.Command{
@@ -63,7 +67,14 @@ Examples:
 
   # With port forwarding
   veessh add tunnel --host jump.example.com --user admin \
-    --local-forward 8080:internal:80 --dynamic-forward 1080`,
+    --local-forward 8080:internal:80 --dynamic-forward 1080
+
+  # GCP Compute Engine
+  veessh add gce-web --type gcloud --host my-vm --gcp-project myproject --gcp-zone us-central1-a
+
+  # Profile inheritance (inherit from template)
+  veessh add prod-template --host example.com --user deploy --identity ~/.ssh/deploy_key
+  veessh add prod-web --extends prod-template --host web.example.com`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
@@ -95,6 +106,10 @@ Examples:
 			LocalForwards:   addLocalForward,
 			RemoteForwards:  addRemoteForward,
 			DynamicForwards: addDynamicForward,
+			GCPProject:      addGCPProject,
+			GCPZone:         addGCPZone,
+			GCPUseTunnel:    addGCPTunnel,
+			Extends:         addExtends,
 		}
 		if err := (&p).Validate(); err != nil {
 			return err
@@ -120,7 +135,7 @@ Examples:
 }
 
 func init() {
-	cmdAdd.Flags().StringVar(&addProtocol, "type", string(config.ProtocolSSH), "protocol: ssh|sftp|telnet|mosh|ssm")
+	cmdAdd.Flags().StringVar(&addProtocol, "type", string(config.ProtocolSSH), "protocol: ssh|sftp|telnet|mosh|ssm|gcloud")
 	cmdAdd.Flags().StringVar(&addHost, "host", "", "host or IP")
 	cmdAdd.Flags().IntVar(&addPort, "port", 0, "port")
 	cmdAdd.Flags().StringVar(&addUser, "user", "", "username")
@@ -145,6 +160,14 @@ func init() {
 	cmdAdd.Flags().StringVar(&addInstanceID, "instance-id", "", "EC2 instance ID (for SSM)")
 	cmdAdd.Flags().StringVar(&addAWSRegion, "aws-region", "", "AWS region (for SSM)")
 	cmdAdd.Flags().StringVar(&addAWSProfile, "aws-profile", "", "AWS profile name (for SSM)")
+
+	// GCP gcloud
+	cmdAdd.Flags().StringVar(&addGCPProject, "gcp-project", "", "GCP project (for gcloud)")
+	cmdAdd.Flags().StringVar(&addGCPZone, "gcp-zone", "", "GCP zone (for gcloud)")
+	cmdAdd.Flags().BoolVar(&addGCPTunnel, "gcp-tunnel", false, "use IAP tunnel (for gcloud)")
+
+	// Profile inheritance
+	cmdAdd.Flags().StringVar(&addExtends, "extends", "", "inherit from another profile")
 }
 
 func promptPassword(prompt string) (string, error) {

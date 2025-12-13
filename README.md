@@ -1,15 +1,28 @@
-veessh - Console connection manager (SSH/SFTP/Telnet/Mosh/SSM)
+veessh - Console connection manager (SSH/SFTP/Telnet/Mosh/SSM/GCloud)
 
 veessh is a Go-based CLI to manage console connection profiles and credentials for
-SSH, SFTP, Telnet, Mosh, AWS SSM, and other tools. It orchestrates native clients
-and stores credentials securely with the system keychain.
+SSH, SFTP, Telnet, Mosh, AWS SSM, GCP gcloud, and other tools. It orchestrates
+native clients and stores credentials securely with the system keychain.
 
 Installation
 
-1. Ensure Go 1.22+
-2. Build:
+Homebrew (macOS/Linux):
 
 ```bash
+brew install alex-vee-sh/tap/veessh
+```
+
+From source (Go 1.22+):
+
+```bash
+go install github.com/alex-vee-sh/veessh/cmd/veessh@latest
+```
+
+Or build manually:
+
+```bash
+git clone https://github.com/alex-vee-sh/veessh.git
+cd veessh
 go build -o veessh ./cmd/veessh
 ```
 
@@ -34,10 +47,12 @@ Key features
 
 - Just run `veessh` for interactive picker (like kubie ctx for k8s)
 - Interactive picking with fuzzy search (built-in; uses fzf if available)
-- Multiple protocols: SSH, SFTP, Telnet, Mosh, AWS SSM
+- Multiple protocols: SSH, SFTP, Telnet, Mosh, AWS SSM, GCP gcloud
+- Profile inheritance: create templates and extend them
 - On-connect automation: remote commands, directory change, environment variables
-- File transfers with `veessh scp` using profile credentials
+- File transfers with `veessh scp` and `veessh rsync`
 - SSH key deployment with `veessh copy-id`
+- Host key pinning and verification with `veessh hostkey`
 - Tmux sessions: open multiple profiles in windows/panes with `veessh session`
 - Remote command execution without interactive shell (`veessh run`)
 - Connectivity testing and diagnostics (`veessh test`, `veessh doctor`)
@@ -61,7 +76,7 @@ Notes
 
 Core commands
 
-- add: Create a new profile (ssh, sftp, telnet, mosh, ssm).
+- add: Create a new profile (ssh, sftp, telnet, mosh, ssm, gcloud).
 - edit: Modify an existing profile.
 - clone: Duplicate a profile with a new name.
 - list: Show profiles (supports --tag and --json).
@@ -69,6 +84,7 @@ Core commands
 - connect: Connect using a profile (supports --forward / --no-forward).
 - run: Execute a remote command without interactive shell.
 - scp: Copy files to/from remote using profile credentials.
+- rsync: Efficiently sync directories with remote host.
 - copy-id: Deploy SSH public key to remote host.
 - session: Open multiple profiles in tmux windows/panes.
 - test: Check if a host is reachable.
@@ -77,6 +93,7 @@ Core commands
 - favorite: Toggle favorite flag.
 - history: View recent connections and usage statistics.
 - audit: View connection audit log.
+- hostkey: Manage host key verification (show, pin, verify, list).
 - doctor: Diagnose connection issues and validate setup.
 - export / import: Export/import profiles (YAML; no passwords).
 - import-ssh: Import from ~/.ssh/config.
@@ -165,6 +182,11 @@ File transfers and key deployment:
 ./veessh scp ./config.yaml mybox:/app/config.yaml
 ./veessh scp -r mybox:/backup/ ./local-backup/
 
+# Efficient directory sync with rsync
+./veessh rsync ./dist/ mybox:/var/www/html/
+./veessh rsync --delete ./dist/ mybox:/var/www/html/  # Remove extra files
+./veessh rsync --dry-run ./dist/ mybox:/var/www/html/ # Preview changes
+
 # Deploy SSH public key
 ./veessh copy-id mybox
 ./veessh copy-id mybox --key ~/.ssh/mykey.pub
@@ -210,6 +232,44 @@ AWS SSM:
 ./veessh connect ec2-prod
 ```
 
+GCP gcloud:
+
+```bash
+# Add GCP Compute Engine profile
+./veessh add gce-web --type gcloud --host my-vm --gcp-project myproject --gcp-zone us-central1-a
+
+# Use IAP tunnel (no public IP needed)
+./veessh add gce-private --type gcloud --host internal-vm --gcp-project myproject --gcp-zone us-east1-b --gcp-tunnel
+```
+
+Profile inheritance (templates):
+
+```bash
+# Create a template profile
+./veessh add prod-template --host example.com --user deploy --identity ~/.ssh/deploy_key
+
+# Create profiles that inherit from template
+./veessh add prod-web --extends prod-template --host web.example.com
+./veessh add prod-api --extends prod-template --host api.example.com
+./veessh add prod-db --extends prod-template --host db.example.com --user dbadmin
+```
+
+Host key verification:
+
+```bash
+# Show a host's current fingerprint
+./veessh hostkey show mybox
+
+# Pin a host's key for future verification
+./veessh hostkey pin mybox
+
+# Verify a host's key against pinned fingerprint
+./veessh hostkey verify mybox
+
+# List all pinned keys
+./veessh hostkey list
+```
+
 Port forwarding:
 
 ```bash
@@ -248,14 +308,11 @@ Completions:
 
 Roadmap
 
-- Profile templates/inheritance and shared read-only org directory merge
 - Rich TUI picker with columns and quick actions (connect, edit, copy, favorite)
-- Host key trust: strict/lenient modes, first-connect fingerprint verify, pinning
 - Secrets integration: 1Password/Bitwarden/AWS Secrets Manager fetch
-- Additional transports: GCP gcloud SSH, serial, RDP stubs
+- Additional transports: serial, RDP stubs
 - Proxy support: SOCKS/HTTP, ProxyCommand, multi-hop chains with saved hops
-- rsync integration for efficient directory sync
-- Packaging: Homebrew tap, static builds
+- Shared read-only org directory merge for team profiles
 
 Pluggability
 
