@@ -76,9 +76,9 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, _ string) err
 func buildRemoteCommand(p config.Profile) string {
 	var parts []string
 
-	// Change to remote directory
+	// Change to remote directory (properly quoted for spaces/special chars)
 	if p.RemoteDir != "" {
-		parts = append(parts, "cd "+p.RemoteDir)
+		parts = append(parts, "cd "+shellQuote(p.RemoteDir))
 	}
 
 	// Execute remote command or start shell
@@ -94,6 +94,13 @@ func buildRemoteCommand(p config.Profile) string {
 	}
 
 	return strings.Join(parts, " && ")
+}
+
+// shellQuote quotes a string for safe use in a shell command
+func shellQuote(s string) string {
+	// Use single quotes and escape any single quotes within
+	// This is the safest way to quote for POSIX shells
+	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 }
 
 func init() {

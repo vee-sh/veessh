@@ -109,18 +109,18 @@ func executeRsync(ctx context.Context, p config.Profile, srcPath, dstPath string
 		rsyncArgs = append(rsyncArgs, "--exclude", exc)
 	}
 
-	// Build SSH command for rsync
-	sshCmd := "ssh"
+	// Build SSH command for rsync with proper quoting
+	sshParts := []string{"ssh"}
 	if p.Port > 0 && p.Port != 22 {
-		sshCmd += " -p " + strconv.Itoa(p.Port)
+		sshParts = append(sshParts, "-p", strconv.Itoa(p.Port))
 	}
 	if p.IdentityFile != "" {
-		sshCmd += " -i " + p.IdentityFile
+		sshParts = append(sshParts, "-i", shellQuoteForRsync(p.IdentityFile))
 	}
 	if p.ProxyJump != "" {
-		sshCmd += " -J " + p.ProxyJump
+		sshParts = append(sshParts, "-J", shellQuoteForRsync(p.ProxyJump))
 	}
-	rsyncArgs = append(rsyncArgs, "-e", sshCmd)
+	rsyncArgs = append(rsyncArgs, "-e", strings.Join(sshParts, " "))
 
 	// Build remote path with user@host prefix
 	remotePrefix := p.Host
@@ -155,6 +155,17 @@ func executeRsync(ctx context.Context, p config.Profile, srcPath, dstPath string
 		return err
 	}
 	return nil
+}
+
+// shellQuoteForRsync quotes a string for use in rsync's -e ssh command
+// Uses single quotes and escapes embedded single quotes
+func shellQuoteForRsync(s string) string {
+	// If no special characters, return as-is
+	if !strings.ContainsAny(s, " \t'\"\\$`!") {
+		return s
+	}
+	// Use single quotes and escape any single quotes within
+	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 }
 
 func init() {
