@@ -308,32 +308,15 @@ Completions:
 
 Roadmap
 
-- Rich TUI picker with columns and quick actions (connect, edit, copy, favorite)
-- Secrets integration: 1Password/Bitwarden/AWS Secrets Manager fetch
-- Additional transports: serial, RDP stubs
-- Proxy support: SOCKS/HTTP, ProxyCommand, multi-hop chains with saved hops
-- Shared read-only org directory merge for team profiles
+- Rich TUI picker with columns and quick actions
+- Secrets integration: 1Password/Bitwarden/AWS Secrets Manager
+- Additional transports: serial, RDP
+- Advanced proxy: SOCKS/HTTP, ProxyCommand, multi-hop chains
 
-Pluggability
+Contributing
 
-Connectors are pluggable; you can add new protocol handlers in
-internal/connectors.
+Connectors are pluggable — add new protocol handlers in `internal/connectors/`.
 
 License
 
-Apache-2.0
-
-Releases via GitHub Actions
-
-- Tag a version and push the tag; the release workflow builds artifacts for
-  Linux and macOS (amd64/arm64) and publishes a release with tarballs and
-  checksums.
-
-```bash
-git tag v0.1.1
-git push origin v0.1.1
-```
-
-The workflow is defined at `.github/workflows/release.yml`.
-
-
+Apache-2.0 — see [LICENSE](LICENSE)
