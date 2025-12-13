@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/alex-vee-sh/veessh/internal/config"
+	"github.com/vee-sh/veessh/internal/config"
 )
 
 var exportFile string

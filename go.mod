@@ -1,4 +1,4 @@
-module github.com/alex-vee-sh/veessh
+module github.com/vee-sh/veessh
 
 go 1.24.0
 

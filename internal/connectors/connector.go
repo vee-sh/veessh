@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/alex-vee-sh/veessh/internal/config"
+	"github.com/vee-sh/veessh/internal/config"
 )
 
 type Connector interface {

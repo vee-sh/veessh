@@ -5,35 +5,35 @@
 # the homebrew-tap repository with actual SHA256 values.
 #
 # To install:
-#   brew tap alex-vee-sh/tap
+#   brew tap vee-sh/tap
 #   brew install veessh
 
 class Veessh < Formula
   desc "Console connection manager for SSH/SFTP/Telnet/Mosh/SSM/GCloud"
-  homepage "https://github.com/alex-vee-sh/veessh"
+  homepage "https://github.com/vee-sh/veessh"
   version "0.3.0"
   license "Apache-2.0"
 
   on_macos do
     on_intel do
-      url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_amd64.tar.gz"
+      url "https://github.com/vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_amd64.tar.gz"
       sha256 "SHA256_DARWIN_AMD64"
     end
 
     on_arm do
-      url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_arm64.tar.gz"
+      url "https://github.com/vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_arm64.tar.gz"
       sha256 "SHA256_DARWIN_ARM64"
     end
   end
 
   on_linux do
     on_intel do
-      url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_linux_amd64.tar.gz"
+      url "https://github.com/vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_linux_amd64.tar.gz"
       sha256 "SHA256_LINUX_AMD64"
     end
 
     on_arm do
-      url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_linux_arm64.tar.gz"
+      url "https://github.com/vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_linux_arm64.tar.gz"
       sha256 "SHA256_LINUX_ARM64"
     end
   end

@@ -10,7 +10,7 @@ import (
 	"github.com/kevinburke/ssh_config"
 	"github.com/spf13/cobra"
 
-	"github.com/alex-vee-sh/veessh/internal/config"
+	"github.com/vee-sh/veessh/internal/config"
 )
 
 var importSSHFile string

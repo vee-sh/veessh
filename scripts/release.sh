@@ -20,7 +20,7 @@ build_one() {
 	local out_name="${APP_NAME}_${VERSION}_${os}_${arch}"
 	local out_dir="${DIST_DIR}/${out_name}"
 	mkdir -p "${out_dir}"
-	local ldflags="-s -w -X github.com/alex-vee-sh/veessh/internal/version.Version=${VERSION} -X github.com/alex-vee-sh/veessh/internal/version.Commit=${COMMIT} -X github.com/alex-vee-sh/veessh/internal/version.Date=${DATE}"
+	local ldflags="-s -w -X github.com/vee-sh/veessh/internal/version.Version=${VERSION} -X github.com/vee-sh/veessh/internal/version.Commit=${COMMIT} -X github.com/vee-sh/veessh/internal/version.Date=${DATE}"
 	GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 \
 		go build -trimpath -ldflags "$ldflags" -o "${out_dir}/${APP_NAME}" "${CMD_PATH}"
 	(

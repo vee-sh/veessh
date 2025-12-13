@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/alex-vee-sh/veessh/internal/config"
-	"github.com/alex-vee-sh/veessh/internal/credentials"
+	"github.com/vee-sh/veessh/internal/config"
+	"github.com/vee-sh/veessh/internal/credentials"
 )
 
 var rmDeletePassword bool

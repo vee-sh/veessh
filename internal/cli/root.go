@@ -10,12 +10,12 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/alex-vee-sh/veessh/internal/audit"
-	"github.com/alex-vee-sh/veessh/internal/config"
-	"github.com/alex-vee-sh/veessh/internal/connectors"
-	"github.com/alex-vee-sh/veessh/internal/credentials"
-	"github.com/alex-vee-sh/veessh/internal/ui"
-	"github.com/alex-vee-sh/veessh/internal/version"
+	"github.com/vee-sh/veessh/internal/audit"
+	"github.com/vee-sh/veessh/internal/config"
+	"github.com/vee-sh/veessh/internal/connectors"
+	"github.com/vee-sh/veessh/internal/credentials"
+	"github.com/vee-sh/veessh/internal/ui"
+	"github.com/vee-sh/veessh/internal/version"
 )
 
 var rootCmd = &cobra.Command{

@@ -4,8 +4,8 @@ import (
 	"context"
 	"os/exec"
 
-	"github.com/alex-vee-sh/veessh/internal/config"
-	"github.com/alex-vee-sh/veessh/internal/util"
+	"github.com/vee-sh/veessh/internal/config"
+	"github.com/vee-sh/veessh/internal/util"
 )
 
 type gcloudConnector struct{}

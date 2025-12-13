@@ -33,7 +33,7 @@ jobs:
             name="veessh_${VERSION}_${os}_${arch}"
             outdir="dist/${name}"
             mkdir -p "$outdir"
-            ldflags="-s -w -X github.com/alex-vee-sh/veessh/internal/version.Version=${VERSION} -X github.com/alex-vee-sh/veessh/internal/version.Commit=${COMMIT} -X github.com/alex-vee-sh/veessh/internal/version.Date=${DATE}"
+            ldflags="-s -w -X github.com/vee-sh/veessh/internal/version.Version=${VERSION} -X github.com/vee-sh/veessh/internal/version.Commit=${COMMIT} -X github.com/vee-sh/veessh/internal/version.Date=${DATE}"
             GOOS=$os GOARCH=$arch CGO_ENABLED=0 \
               go build -trimpath -ldflags "$ldflags" -o "$outdir/veessh" ./cmd/veessh
             tar -C dist -czf "dist/${name}.tar.gz" "$name"
@@ -53,13 +53,13 @@ jobs:
           name: veessh ${{ github.ref_name }}
           body: |
             ## What's Changed
-            See [CHANGELOG](https://github.com/alex-vee-sh/veessh/blob/main/CHANGELOG.md) for details.
+            See [CHANGELOG](https://github.com/vee-sh/veessh/blob/main/CHANGELOG.md) for details.
             
             ## Installation
             
             **Homebrew:**
             ```bash
-            brew tap alex-vee-sh/tap
+            brew tap vee-sh/tap
             brew install veessh
             ```
             

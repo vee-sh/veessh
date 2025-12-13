@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-    "github.com/alex-vee-sh/veessh/internal/cli"
+    "github.com/vee-sh/veessh/internal/cli"
 )
 
 func main() {

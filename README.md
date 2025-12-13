@@ -9,19 +9,19 @@ Installation
 Homebrew (macOS/Linux):
 
 ```bash
-brew install alex-vee-sh/tap/veessh
+brew install vee-sh/tap/veessh
 ```
 
 From source (Go 1.22+):
 
 ```bash
-go install github.com/alex-vee-sh/veessh/cmd/veessh@latest
+go install github.com/vee-sh/veessh/cmd/veessh@latest
 ```
 
 Or build manually:
 
 ```bash
-git clone https://github.com/alex-vee-sh/veessh.git
+git clone https://github.com/vee-sh/veessh.git
 cd veessh
 go build -o veessh ./cmd/veessh
 ```

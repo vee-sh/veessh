@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"github.com/alex-vee-sh/veessh/internal/config"
+	"github.com/vee-sh/veessh/internal/config"
 )
 
 func TestBuildSSHCommand(t *testing.T) {

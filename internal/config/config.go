@@ -255,10 +255,18 @@ func (c *Config) resolveInheritance(p Profile, visited map[string]bool) Profile 
 		merged.SetEnv = p.SetEnv
 	}
 
-	// Booleans: use child's value (can't distinguish unset from false easily)
-	merged.UseAgent = p.UseAgent
-	merged.Favorite = p.Favorite
-	merged.GCPUseTunnel = p.GCPUseTunnel
+	// Booleans: only override if child explicitly sets to true
+	// (we can't distinguish "unset" from "false" in Go, so we preserve
+	// parent's true value unless child explicitly sets true)
+	if p.UseAgent {
+		merged.UseAgent = true
+	}
+	if p.Favorite {
+		merged.Favorite = true
+	}
+	if p.GCPUseTunnel {
+		merged.GCPUseTunnel = true
+	}
 
 	// Preserve child's usage stats
 	merged.LastUsed = p.LastUsed

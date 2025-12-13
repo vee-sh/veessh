@@ -13,7 +13,7 @@ import (
 	survey "github.com/AlecAivazis/survey/v2"
 	"github.com/AlecAivazis/survey/v2/terminal"
 
-	"github.com/alex-vee-sh/veessh/internal/config"
+	"github.com/vee-sh/veessh/internal/config"
 )
 
 // PickProfileInteractive can use fzf or survey to select a profile with optional filters and sorting.

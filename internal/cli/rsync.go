@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/alex-vee-sh/veessh/internal/config"
-	"github.com/alex-vee-sh/veessh/internal/util"
+	"github.com/vee-sh/veessh/internal/config"
+	"github.com/vee-sh/veessh/internal/util"
 )
 
 var (

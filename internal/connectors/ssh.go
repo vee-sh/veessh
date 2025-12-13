@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/alex-vee-sh/veessh/internal/config"
-	"github.com/alex-vee-sh/veessh/internal/util"
+	"github.com/vee-sh/veessh/internal/config"
+	"github.com/vee-sh/veessh/internal/util"
 )
 
 type sshConnector struct{}
@@ -76,9 +76,9 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, _ string) err
 func buildRemoteCommand(p config.Profile) string {
 	var parts []string
 
-	// Change to remote directory
+	// Change to remote directory (properly quoted for spaces/special chars)
 	if p.RemoteDir != "" {
-		parts = append(parts, "cd "+p.RemoteDir)
+		parts = append(parts, "cd "+shellQuote(p.RemoteDir))
 	}
 
 	// Execute remote command or start shell
@@ -94,6 +94,12 @@ func buildRemoteCommand(p config.Profile) string {
 	}
 
 	return strings.Join(parts, " && ")
+}
+
+// shellQuote quotes a string for safe use in a shell command.
+// Uses single quotes with proper escaping for embedded single quotes.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 }
 
 func init() {

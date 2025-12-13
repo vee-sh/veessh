@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/alex-vee-sh/veessh/internal/config"
+import "github.com/vee-sh/veessh/internal/config"
 
 func effectivePort(p config.Profile) int {
 	if p.Port > 0 {
