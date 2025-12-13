@@ -84,16 +84,27 @@ func buildSSHCommand(p config.Profile) string {
 		args = append(args, "-p", fmt.Sprintf("%d", p.Port))
 	}
 	if p.Username != "" {
-		args = append(args, "-l", p.Username)
+		args = append(args, "-l", shellQuoteArg(p.Username))
 	}
 	if p.IdentityFile != "" {
-		args = append(args, "-i", p.IdentityFile)
+		args = append(args, "-i", shellQuoteArg(p.IdentityFile))
 	}
 	if p.ProxyJump != "" {
-		args = append(args, "-J", p.ProxyJump)
+		args = append(args, "-J", shellQuoteArg(p.ProxyJump))
 	}
-	args = append(args, p.Host)
+	args = append(args, shellQuoteArg(p.Host))
 	return strings.Join(args, " ")
+}
+
+// shellQuoteArg quotes a string for use in a shell command if needed.
+// Returns the string unchanged if it contains no special characters.
+func shellQuoteArg(s string) string {
+	// If no special characters, return as-is
+	if !strings.ContainsAny(s, " \t'\"\\$`!;|&()<>") {
+		return s
+	}
+	// Use single quotes and escape any embedded single quotes
+	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 }
 
 func createTmuxWindows(ctx context.Context, sessName string, profiles []config.Profile) error {

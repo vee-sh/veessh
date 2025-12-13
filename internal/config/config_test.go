@@ -224,12 +224,14 @@ func TestProfileInheritance(t *testing.T) {
 			IdentityFile: "/path/to/key",
 			Group:        "production",
 			Tags:         []string{"prod", "web"},
+			UseAgent:     true, // Boolean that should be inherited
 		},
 		"child": {
 			Name:     "child",
 			Host:     "child.example.com",
 			Username: "childuser",
 			Extends:  "parent",
+			// UseAgent not set - should inherit parent's true
 		},
 	}}
 
@@ -249,6 +251,11 @@ func TestProfileInheritance(t *testing.T) {
 		t.Errorf("Group = %s, want production (inherited)", child.Group)
 	}
 
+	// Boolean inheritance: child should inherit parent's UseAgent=true
+	if !child.UseAgent {
+		t.Errorf("UseAgent = %v, want true (inherited from parent)", child.UseAgent)
+	}
+
 	// Should override parent values
 	if child.Host != "child.example.com" {
 		t.Errorf("Host = %s, want child.example.com", child.Host)
@@ -265,6 +272,49 @@ func TestProfileInheritance(t *testing.T) {
 	// Extends should be cleared after resolution
 	if child.Extends != "" {
 		t.Errorf("Extends = %s, should be empty after resolution", child.Extends)
+	}
+}
+
+func TestProfileInheritanceBooleans(t *testing.T) {
+	cfg := Config{Profiles: map[string]Profile{
+		"parent": {
+			Name:         "parent",
+			Protocol:     ProtocolSSH,
+			Host:         "parent.example.com",
+			UseAgent:     true,
+			Favorite:     true,
+			GCPUseTunnel: true,
+		},
+		"child-no-override": {
+			Name:    "child-no-override",
+			Host:    "child.example.com",
+			Extends: "parent",
+			// All booleans unset (default false) - should inherit parent's true values
+		},
+		"child-with-true": {
+			Name:     "child-with-true",
+			Host:     "child2.example.com",
+			Extends:  "parent",
+			UseAgent: true, // Explicitly set to true
+		},
+	}}
+
+	// Test that unset booleans inherit parent's true values
+	child1, _ := cfg.GetProfile("child-no-override")
+	if !child1.UseAgent {
+		t.Errorf("child-no-override.UseAgent = false, want true (inherited)")
+	}
+	if !child1.Favorite {
+		t.Errorf("child-no-override.Favorite = false, want true (inherited)")
+	}
+	if !child1.GCPUseTunnel {
+		t.Errorf("child-no-override.GCPUseTunnel = false, want true (inherited)")
+	}
+
+	// Test that explicitly set true values are preserved
+	child2, _ := cfg.GetProfile("child-with-true")
+	if !child2.UseAgent {
+		t.Errorf("child-with-true.UseAgent = false, want true")
 	}
 }
 

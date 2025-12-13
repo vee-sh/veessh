@@ -96,10 +96,9 @@ func buildRemoteCommand(p config.Profile) string {
 	return strings.Join(parts, " && ")
 }
 
-// shellQuote quotes a string for safe use in a shell command
+// shellQuote quotes a string for safe use in a shell command.
+// Uses single quotes with proper escaping for embedded single quotes.
 func shellQuote(s string) string {
-	// Use single quotes and escape any single quotes within
-	// This is the safest way to quote for POSIX shells
 	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 }
 
