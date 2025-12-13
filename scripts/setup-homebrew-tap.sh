@@ -13,7 +13,8 @@
 
 set -euo pipefail
 
-OWNER="alex-vee-sh"
+# Get the authenticated GitHub username
+OWNER="${1:-$(gh api user -q .login)}"
 REPO="homebrew-tap"
 
 echo "=== Homebrew Tap Setup ==="
@@ -49,36 +50,36 @@ cd homebrew-tap
 mkdir -p Formula
 
 # Create initial formula (placeholder)
-cat > Formula/veessh.rb << 'EOF'
+cat > Formula/veessh.rb << EOF
 # typed: false
 # frozen_string_literal: true
 
 class Veessh < Formula
   desc "Console connection manager for SSH/SFTP/Telnet/Mosh/SSM/GCloud"
-  homepage "https://github.com/alex-vee-sh/veessh"
+  homepage "https://github.com/${OWNER}/veessh"
   version "0.3.0"
   license "Apache-2.0"
 
   on_macos do
     on_intel do
-      url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_amd64.tar.gz"
+      url "https://github.com/${OWNER}/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_amd64.tar.gz"
       sha256 "PLACEHOLDER_WILL_BE_UPDATED_BY_RELEASE_WORKFLOW"
     end
 
     on_arm do
-      url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_arm64.tar.gz"
+      url "https://github.com/${OWNER}/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_arm64.tar.gz"
       sha256 "PLACEHOLDER_WILL_BE_UPDATED_BY_RELEASE_WORKFLOW"
     end
   end
 
   on_linux do
     on_intel do
-      url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_linux_amd64.tar.gz"
+      url "https://github.com/${OWNER}/veessh/releases/download/v#{version}/veessh_v#{version}_linux_amd64.tar.gz"
       sha256 "PLACEHOLDER_WILL_BE_UPDATED_BY_RELEASE_WORKFLOW"
     end
 
     on_arm do
-      url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_linux_arm64.tar.gz"
+      url "https://github.com/${OWNER}/veessh/releases/download/v#{version}/veessh_v#{version}_linux_arm64.tar.gz"
       sha256 "PLACEHOLDER_WILL_BE_UPDATED_BY_RELEASE_WORKFLOW"
     end
   end
@@ -95,30 +96,30 @@ end
 EOF
 
 # Create README
-cat > README.md << 'EOF'
+cat > README.md << EOF
 # Homebrew Tap for veessh
 
-This tap contains the Homebrew formula for [veessh](https://github.com/alex-vee-sh/veessh).
+This tap contains the Homebrew formula for [veessh](https://github.com/${OWNER}/veessh).
 
 ## Installation
 
-```bash
-brew tap alex-vee-sh/tap
+\`\`\`bash
+brew tap ${OWNER}/tap
 brew install veessh
-```
+\`\`\`
 
 ## Updating
 
-```bash
+\`\`\`bash
 brew update
 brew upgrade veessh
-```
+\`\`\`
 
 ## About veessh
 
 veessh is a console connection manager supporting SSH, SFTP, Telnet, Mosh, AWS SSM, and GCP gcloud.
 
-For more information, see the [main repository](https://github.com/alex-vee-sh/veessh).
+For more information, see the [main repository](https://github.com/${OWNER}/veessh).
 EOF
 
 # Commit
@@ -150,7 +151,10 @@ echo "   https://github.com/${OWNER}/veessh/settings/secrets/actions/new"
 echo "   Name: TAP_GITHUB_TOKEN"
 echo "   Value: <your PAT>"
 echo ""
-echo "3. Push a new tag to trigger the release workflow:"
+echo "3. Update .github/workflows/release.yml to use your tap:"
+echo "   Change 'alex-vee-sh/homebrew-tap' to '${OWNER}/homebrew-tap'"
+echo ""
+echo "4. Push a new tag to trigger the release workflow:"
 echo "   git tag -a v0.3.1 -m 'Trigger tap update'"
 echo "   git push origin v0.3.1"
 echo ""

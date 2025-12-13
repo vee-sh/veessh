@@ -138,11 +138,13 @@ jobs:
   update-homebrew:
     needs: sign-macos
     runs-on: ubuntu-latest
+    env:
+      REPO_OWNER: ${{ github.repository_owner }}
     steps:
       - name: Checkout tap repository
         uses: actions/checkout@v4
         with:
-          repository: alex-vee-sh/homebrew-tap
+          repository: ${{ github.repository_owner }}/homebrew-tap
           token: ${{ secrets.TAP_GITHUB_TOKEN }}
           path: homebrew-tap
 
@@ -179,30 +181,30 @@ jobs:
           
           class Veessh < Formula
             desc "Console connection manager for SSH/SFTP/Telnet/Mosh/SSM/GCloud"
-            homepage "https://github.com/alex-vee-sh/veessh"
+            homepage "https://github.com/${REPO_OWNER}/veessh"
             version "${VER}"
             license "Apache-2.0"
           
             on_macos do
               on_intel do
-                url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_amd64.tar.gz"
+                url "https://github.com/${REPO_OWNER}/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_amd64.tar.gz"
                 sha256 "${SHA_DARWIN_AMD64}"
               end
           
               on_arm do
-                url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_arm64.tar.gz"
+                url "https://github.com/${REPO_OWNER}/veessh/releases/download/v#{version}/veessh_v#{version}_darwin_arm64.tar.gz"
                 sha256 "${SHA_DARWIN_ARM64}"
               end
             end
           
             on_linux do
               on_intel do
-                url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_linux_amd64.tar.gz"
+                url "https://github.com/${REPO_OWNER}/veessh/releases/download/v#{version}/veessh_v#{version}_linux_amd64.tar.gz"
                 sha256 "${SHA_LINUX_AMD64}"
               end
           
               on_arm do
-                url "https://github.com/alex-vee-sh/veessh/releases/download/v#{version}/veessh_v#{version}_linux_arm64.tar.gz"
+                url "https://github.com/${REPO_OWNER}/veessh/releases/download/v#{version}/veessh_v#{version}_linux_arm64.tar.gz"
                 sha256 "${SHA_LINUX_ARM64}"
               end
             end
