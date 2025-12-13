@@ -1,8 +1,8 @@
-veessh - Console connection manager (SSH/SFTP/Telnet)
+veessh - Console connection manager (SSH/SFTP/Telnet/Mosh/SSM)
 
 veessh is a Go-based CLI to manage console connection profiles and credentials for
-SSH, SFTP, Telnet, and other tools. It orchestrates native clients (ssh, sftp,
-telnet) and stores credentials securely with the system keychain.
+SSH, SFTP, Telnet, Mosh, AWS SSM, and other tools. It orchestrates native clients
+and stores credentials securely with the system keychain.
 
 Installation
 
@@ -34,11 +34,17 @@ Key features
 
 - Just run `veessh` for interactive picker (like kubie ctx for k8s)
 - Interactive picking with fuzzy search (built-in; uses fzf if available)
-- Favorites and recents; usage tracking updates on successful connect
+- Multiple protocols: SSH, SFTP, Telnet, Mosh, AWS SSM
+- On-connect automation: remote commands, directory change, environment variables
+- File transfers with `veessh scp` using profile credentials
+- SSH key deployment with `veessh copy-id`
+- Tmux sessions: open multiple profiles in windows/panes with `veessh session`
 - Remote command execution without interactive shell (`veessh run`)
 - Connectivity testing and diagnostics (`veessh test`, `veessh doctor`)
-- ProxyJump support; tag support; JSON output for list/show/history
-- Port-forward presets on profiles (local/remote/dynamic)
+- Connection audit logging with `veessh audit`
+- Port-forward presets with toggle at connect time (`--forward` / `--no-forward`)
+- Favorites and recents; usage tracking updates on successful connect
+- ProxyJump support; tag support; JSON output for list/show/history/audit
 - Import/export profiles (YAML), and import from OpenSSH config
 - Shell completions for bash/zsh/fish/powershell
 - Graceful Ctrl+C: clean cancellation with "ok. exiting"
@@ -55,18 +61,22 @@ Notes
 
 Core commands
 
-- add: Create a new profile.
+- add: Create a new profile (ssh, sftp, telnet, mosh, ssm).
 - edit: Modify an existing profile.
 - clone: Duplicate a profile with a new name.
 - list: Show profiles (supports --tag and --json).
 - show: Show details for a profile (supports --json).
-- connect: Connect using a profile.
+- connect: Connect using a profile (supports --forward / --no-forward).
 - run: Execute a remote command without interactive shell.
+- scp: Copy files to/from remote using profile credentials.
+- copy-id: Deploy SSH public key to remote host.
+- session: Open multiple profiles in tmux windows/panes.
 - test: Check if a host is reachable.
 - pick: Interactively pick and connect (supports --fzf, --favorites, --tag,
   --recent-first, --print).
 - favorite: Toggle favorite flag.
 - history: View recent connections and usage statistics.
+- audit: View connection audit log.
 - doctor: Diagnose connection issues and validate setup.
 - export / import: Export/import profiles (YAML; no passwords).
 - import-ssh: Import from ~/.ssh/config.
@@ -147,6 +157,79 @@ History and statistics:
 ./veessh history --json        # JSON output
 ```
 
+File transfers and key deployment:
+
+```bash
+# Copy files using profile credentials
+./veessh scp mybox:/var/log/app.log ./app.log
+./veessh scp ./config.yaml mybox:/app/config.yaml
+./veessh scp -r mybox:/backup/ ./local-backup/
+
+# Deploy SSH public key
+./veessh copy-id mybox
+./veessh copy-id mybox --key ~/.ssh/mykey.pub
+```
+
+Tmux sessions:
+
+```bash
+# Open multiple profiles in tmux windows
+./veessh session web-server db-server cache-server
+
+# Named session
+./veessh session prod-web prod-db --name prod-cluster
+
+# Open as panes with layout
+./veessh session web1 web2 web3 --layout tiled
+./veessh session master worker --layout even-horizontal
+```
+
+On-connect automation:
+
+```bash
+# Auto-attach to tmux on connect
+./veessh add dev --host dev.example --user dev --remote-cmd "tmux attach || tmux new"
+
+# Auto-cd to directory
+./veessh add web --host web.example --user deploy --remote-dir /var/www/app
+```
+
+Mosh (mobile shell):
+
+```bash
+# Add mosh profile for unstable connections
+./veessh add flaky --type mosh --host unstable.example --user alice
+./veessh connect flaky
+```
+
+AWS SSM:
+
+```bash
+# Add SSM profile (no open ports needed)
+./veessh add ec2-prod --type ssm --instance-id i-1234567890abcdef0 --aws-region us-east-1
+./veessh connect ec2-prod
+```
+
+Port forwarding:
+
+```bash
+# Add profile with port forwards
+./veessh add tunnel --host jump.example --user admin \
+  --local-forward 8080:internal:80 --dynamic-forward 1080
+
+# Connect with/without forwarding
+./veessh connect tunnel              # With forwards
+./veessh connect tunnel --no-forward # Skip forwards this time
+```
+
+Audit log:
+
+```bash
+./veessh audit           # View connection audit log
+./veessh audit -n 10     # Last 10 entries
+./veessh audit --json    # JSON output
+```
+
 Completions:
 
 ```bash
@@ -165,21 +248,14 @@ Completions:
 
 Roadmap
 
-- On-connect automation: per-profile commands (tmux attach/new, cd, env vars),
-  remote working dir
-- Port-forward presets UX: toggle at connect time; named presets per profile
 - Profile templates/inheritance and shared read-only org directory merge
 - Rich TUI picker with columns and quick actions (connect, edit, copy, favorite)
 - Host key trust: strict/lenient modes, first-connect fingerprint verify, pinning
 - Secrets integration: 1Password/Bitwarden/AWS Secrets Manager fetch
-- Additional transports: AWS SSM, GCP gcloud SSH, mosh, serial, RDP stubs
+- Additional transports: GCP gcloud SSH, serial, RDP stubs
 - Proxy support: SOCKS/HTTP, ProxyCommand, multi-hop chains with saved hops
-- Teams/audit: connection audit log (timestamp/duration, no secrets), reports
-- Scripting: JSON for all commands, stable schema, machine-mode to avoid prompts
-- Packaging: Homebrew tap, release artifacts, static builds, CI lint/test/build
-- Sessions: open multiple profiles into tmux windows, named sessions, layouts
-- SCP/rsync integration: file transfer shortcuts using profile credentials
-- Copy-id: ssh-copy-id integration for easy key deployment
+- rsync integration for efficient directory sync
+- Packaging: Homebrew tap, static builds
 
 Pluggability
 

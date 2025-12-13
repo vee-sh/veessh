@@ -4,19 +4,36 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/alex-vee-sh/veessh/internal/audit"
 	"github.com/alex-vee-sh/veessh/internal/config"
 	"github.com/alex-vee-sh/veessh/internal/connectors"
 	"github.com/alex-vee-sh/veessh/internal/credentials"
 )
 
+var (
+	connectNoForward  bool
+	connectWithForward bool
+)
+
 var cmdConnect = &cobra.Command{
 	Use:   "connect <name>",
 	Short: "Connect using a profile",
-	Args:  cobra.ExactArgs(1),
+	Long: `Connect to a remote host using a saved profile.
+
+Port forwarding can be toggled at connect time:
+  --forward     Enable port forwards defined in profile
+  --no-forward  Disable port forwards for this connection
+
+Examples:
+  veessh connect mybox
+  veessh connect mybox --no-forward    # Skip port forwarding
+  veessh connect mybox --forward       # Ensure forwards are enabled`,
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		cfgPath, err := config.DefaultPath()
@@ -31,18 +48,44 @@ var cmdConnect = &cobra.Command{
 		if !ok {
 			return fmt.Errorf("profile %q not found", name)
 		}
+
+		// Handle port-forward toggle
+		if connectNoForward {
+			p.LocalForwards = nil
+			p.RemoteForwards = nil
+			p.DynamicForwards = nil
+		}
+
 		conn, err := connectors.Get(p.Protocol)
 		if err != nil {
 			return err
 		}
 		password, _ := credentials.GetPassword(name)
+
+		// Audit log: connection start
+		startTime := time.Now()
+		audit.LogConnect(p.Name, string(p.Protocol), p.Host, p.Username)
+
 		// Use command context to support Ctrl+C cancel
+		var exitCode int
+		var connErr error
 		if err := conn.Exec(cmd.Context(), p, password); err != nil {
+			connErr = err
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				exitCode = exitErr.ExitCode()
+			}
+			// Audit log: connection end with error
+			audit.LogDisconnect(p.Name, string(p.Protocol), p.Host, p.Username, startTime, exitCode, connErr)
+
 			if errors.Is(err, context.Canceled) {
 				return context.Canceled
 			}
 			return err
 		}
+
+		// Audit log: successful disconnect
+		audit.LogDisconnect(p.Name, string(p.Protocol), p.Host, p.Username, startTime, 0, nil)
+
 		// Update usage tracking
 		p.LastUsed = time.Now()
 		p.UseCount++
@@ -53,4 +96,9 @@ var cmdConnect = &cobra.Command{
 		}
 		return nil
 	},
+}
+
+func init() {
+	cmdConnect.Flags().BoolVar(&connectNoForward, "no-forward", false, "disable port forwarding for this connection")
+	cmdConnect.Flags().BoolVar(&connectWithForward, "forward", false, "enable port forwarding (default if configured)")
 }

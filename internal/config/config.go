@@ -19,6 +19,8 @@ const (
 	ProtocolSSH    Protocol = "ssh"
 	ProtocolSFTP   Protocol = "sftp"
 	ProtocolTelnet Protocol = "telnet"
+	ProtocolMosh   Protocol = "mosh"
+	ProtocolSSM    Protocol = "ssm"
 )
 
 type Profile struct {
@@ -40,6 +42,19 @@ type Profile struct {
 	LocalForwards   []string  `yaml:"localForwards"`
 	RemoteForwards  []string  `yaml:"remoteForwards"`
 	DynamicForwards []string  `yaml:"dynamicForwards"`
+
+	// On-connect automation
+	RemoteCommand string   `yaml:"remoteCommand,omitempty"` // Command to run on connect (e.g., "tmux attach || tmux new")
+	RemoteDir     string   `yaml:"remoteDir,omitempty"`     // cd to this directory on connect
+	SetEnv        []string `yaml:"setEnv,omitempty"`        // Environment variables to set (KEY=VALUE)
+
+	// AWS SSM specific
+	AWSRegion    string `yaml:"awsRegion,omitempty"`
+	AWSProfile   string `yaml:"awsProfile,omitempty"`
+	InstanceID   string `yaml:"instanceId,omitempty"` // EC2 instance ID for SSM
+
+	// Mosh specific
+	MoshServer string `yaml:"moshServer,omitempty"` // Path to mosh-server on remote
 }
 
 type Config struct {
@@ -151,7 +166,7 @@ func (p *Profile) Validate() error {
 		return errors.New("profile name is required")
 	}
 	switch p.Protocol {
-	case ProtocolSSH, ProtocolSFTP, ProtocolTelnet:
+	case ProtocolSSH, ProtocolSFTP, ProtocolTelnet, ProtocolMosh, ProtocolSSM:
 		// ok
 	default:
 		return fmt.Errorf("unsupported protocol: %s", p.Protocol)
@@ -161,10 +176,12 @@ func (p *Profile) Validate() error {
 	}
 	if p.Port <= 0 {
 		switch p.Protocol {
-		case ProtocolSSH, ProtocolSFTP:
+		case ProtocolSSH, ProtocolSFTP, ProtocolMosh:
 			p.Port = 22
 		case ProtocolTelnet:
 			p.Port = 23
+		case ProtocolSSM:
+			// SSM doesn't use ports
 		}
 	}
 	return nil

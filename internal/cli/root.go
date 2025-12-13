@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/alex-vee-sh/veessh/internal/audit"
 	"github.com/alex-vee-sh/veessh/internal/config"
 	"github.com/alex-vee-sh/veessh/internal/connectors"
 	"github.com/alex-vee-sh/veessh/internal/credentials"
@@ -47,10 +48,14 @@ func addSubcommands() {
 	rootCmd.AddCommand(cmdConnect)
 	rootCmd.AddCommand(cmdRun)
 	rootCmd.AddCommand(cmdTest)
+	rootCmd.AddCommand(cmdScp)
+	rootCmd.AddCommand(cmdCopyId)
+	rootCmd.AddCommand(cmdSession)
 	rootCmd.AddCommand(cmdRemove)
 	rootCmd.AddCommand(cmdPick)
 	rootCmd.AddCommand(cmdFavorite)
 	rootCmd.AddCommand(cmdHistory)
+	rootCmd.AddCommand(cmdAudit)
 	rootCmd.AddCommand(cmdDoctor)
 	rootCmd.AddCommand(cmdExport)
 	rootCmd.AddCommand(cmdImport)
@@ -131,12 +136,21 @@ func runInteractive(cmd *cobra.Command, args []string) error {
 	}
 
 	password, _ := credentials.GetPassword(p.Name)
+
+	// Audit log: connection start
+	startTime := time.Now()
+	audit.LogConnect(p.Name, string(p.Protocol), p.Host, p.Username)
+
 	if err := conn.Exec(cmd.Context(), p, password); err != nil {
+		audit.LogDisconnect(p.Name, string(p.Protocol), p.Host, p.Username, startTime, 1, err)
 		if errors.Is(err, context.Canceled) {
 			return context.Canceled
 		}
 		return err
 	}
+
+	// Audit log: successful disconnect
+	audit.LogDisconnect(p.Name, string(p.Protocol), p.Host, p.Username, startTime, 0, nil)
 
 	// Update usage tracking
 	p.LastUsed = time.Now()
