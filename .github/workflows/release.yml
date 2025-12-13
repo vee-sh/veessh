@@ -140,8 +140,20 @@ jobs:
     runs-on: ubuntu-latest
     env:
       REPO_OWNER: ${{ github.repository_owner }}
+      TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
     steps:
+      - name: Check if TAP_GITHUB_TOKEN is set
+        id: check-token
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "::warning::TAP_GITHUB_TOKEN not set. Skipping homebrew tap update."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout tap repository
+        if: steps.check-token.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/homebrew-tap
@@ -149,6 +161,7 @@ jobs:
           path: homebrew-tap
 
       - name: Download SHA256 files
+        if: steps.check-token.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ github.ref_name }}
@@ -162,6 +175,7 @@ jobs:
           done
 
       - name: Update formula
+        if: steps.check-token.outputs.skip != 'true'
         env:
           VERSION: ${{ github.ref_name }}
         run: |
@@ -223,6 +237,7 @@ jobs:
           EOF
 
       - name: Commit and push formula
+        if: steps.check-token.outputs.skip != 'true'
         env:
           VERSION: ${{ github.ref_name }}
         run: |
