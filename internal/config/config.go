@@ -50,9 +50,9 @@ type Profile struct {
 	SetEnv        []string `yaml:"setEnv,omitempty"`        // Environment variables to set (KEY=VALUE)
 
 	// AWS SSM specific
-	AWSRegion    string `yaml:"awsRegion,omitempty"`
-	AWSProfile   string `yaml:"awsProfile,omitempty"`
-	InstanceID   string `yaml:"instanceId,omitempty"` // EC2 instance ID for SSM
+	AWSRegion  string `yaml:"awsRegion,omitempty"`
+	AWSProfile string `yaml:"awsProfile,omitempty"`
+	InstanceID string `yaml:"instanceId,omitempty"` // EC2 instance ID for SSM
 
 	// Mosh specific
 	MoshServer string `yaml:"moshServer,omitempty"` // Path to mosh-server on remote
@@ -255,18 +255,10 @@ func (c *Config) resolveInheritance(p Profile, visited map[string]bool) Profile 
 		merged.SetEnv = p.SetEnv
 	}
 
-	// Booleans: only override if child explicitly sets to true
-	// (we can't distinguish "unset" from "false" in Go, so we preserve
-	// parent's true value unless child explicitly sets true)
-	if p.UseAgent {
-		merged.UseAgent = true
-	}
-	if p.Favorite {
-		merged.Favorite = true
-	}
-	if p.GCPUseTunnel {
-		merged.GCPUseTunnel = true
-	}
+	// Booleans: use child's value (can't distinguish unset from false easily)
+	merged.UseAgent = p.UseAgent
+	merged.Favorite = p.Favorite
+	merged.GCPUseTunnel = p.GCPUseTunnel
 
 	// Preserve child's usage stats
 	merged.LastUsed = p.LastUsed

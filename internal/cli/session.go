@@ -99,11 +99,9 @@ func buildSSHCommand(p config.Profile) string {
 // shellQuoteArg quotes a string for use in a shell command if needed.
 // Returns the string unchanged if it contains no special characters.
 func shellQuoteArg(s string) string {
-	// If no special characters, return as-is
 	if !strings.ContainsAny(s, " \t'\"\\$`!;|&()<>") {
 		return s
 	}
-	// Use single quotes and escape any embedded single quotes
 	return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'"
 }
 
@@ -208,4 +206,3 @@ func init() {
 	cmdSession.Flags().StringVarP(&sessionName, "name", "n", "", "tmux session name (default: veessh-<first-profile>)")
 	cmdSession.Flags().StringVarP(&sessionLayout, "layout", "l", "", "create panes with layout: tiled, even-horizontal, even-vertical, main-horizontal, main-vertical")
 }
-
