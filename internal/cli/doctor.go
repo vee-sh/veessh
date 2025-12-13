@@ -214,6 +214,6 @@ func expandHomePath(path string) string {
 }
 
 func init() {
-	cmdDoctor.Flags().BoolVarP(&doctorVerbose, "verbose", "v", false, "verbose output")
+	cmdDoctor.Flags().BoolVar(&doctorVerbose, "verbose", false, "verbose output")
 }
 

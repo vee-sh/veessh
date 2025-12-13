@@ -171,7 +171,7 @@ func shellQuoteForRsync(s string) string {
 func init() {
 	cmdRsync.Flags().BoolVar(&rsyncDelete, "delete", false, "delete files in destination not in source")
 	cmdRsync.Flags().BoolVarP(&rsyncDryRun, "dry-run", "n", false, "show what would be transferred")
-	cmdRsync.Flags().BoolVarP(&rsyncVerbose, "verbose", "v", false, "verbose output")
+	cmdRsync.Flags().BoolVar(&rsyncVerbose, "verbose", false, "verbose output")
 	cmdRsync.Flags().BoolVar(&rsyncProgress, "progress", false, "show transfer progress")
 	cmdRsync.Flags().StringSliceVar(&rsyncExclude, "exclude", nil, "exclude pattern (repeatable)")
 }
