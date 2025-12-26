@@ -62,6 +62,7 @@ func addSubcommands() {
 	rootCmd.AddCommand(cmdExport)
 	rootCmd.AddCommand(cmdImport)
 	rootCmd.AddCommand(cmdImportSSH)
+	rootCmd.AddCommand(cmdEditConfig)
 	rootCmd.AddCommand(cmdCompletion)
 	rootCmd.AddCommand(cmdVersion)
 }
@@ -118,9 +119,19 @@ func runInteractive(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(cfg.Profiles) == 0 {
-		fmt.Println("No profiles configured. Add one with:")
-		fmt.Println("  veessh add <name> --host <host> --user <user>")
-		return nil
+		// Launch onboarding wizard for first-time users
+		if err := runOnboardingWizard(cfgPath); err != nil {
+			return err
+		}
+		// Reload config after wizard
+		cfg, err = config.Load(cfgPath)
+		if err != nil {
+			return err
+		}
+		// If still no profiles, exit gracefully
+		if len(cfg.Profiles) == 0 {
+			return nil
+		}
 	}
 
 	// Launch interactive picker (prefer fzf if available)

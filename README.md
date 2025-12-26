@@ -63,16 +63,20 @@ Key features
 - Import/export profiles (YAML), and import from OpenSSH config
 - Shell completions for bash/zsh/fish/powershell
 - Graceful Ctrl+C: clean cancellation with "ok. exiting"
+- **TUI onboarding wizard**: First-time users get an interactive setup wizard
+- **Config editor**: `veessh edit-config` opens config in your editor (vi/vim/nano/etc)
+- **1Password integration**: Store passwords in 1Password instead of system keychain
 
 Notes
 
 - veessh uses your system's native tools (ssh, sftp, telnet). Ensure they are
   installed and in PATH.
-- Passwords are optional; when provided, they are stored in the OS keychain via
-  github.com/99designs/keyring. The current version does not auto-inject
-  passwords into ssh; you'll be prompted by the tool as usual. Keys and agents
-  are fully supported.
-- Config lives at ~/.config/veessh/config.yaml by default.
+- **Password storage**: Passwords are stored securely using:
+  - **1Password** (if `op` CLI is installed and signed in) - automatically detected
+  - **System keychain** (macOS Keychain, Linux Secret Service, Windows Credential Manager) - fallback
+  - Set `VEESSH_CREDENTIALS_BACKEND=1password` or `VEESSH_CREDENTIALS_BACKEND=keyring` to force a specific backend
+- **SSH keys**: Private keys are stored on disk (typically `~/.ssh/`). Ensure proper permissions (600) and consider using SSH agent for added security.
+- Config lives at `~/.config/veessh/config.yaml` by default.
 
 Core commands
 
@@ -97,6 +101,7 @@ Core commands
 - doctor: Diagnose connection issues and validate setup.
 - export / import: Export/import profiles (YAML; no passwords).
 - import-ssh: Import from ~/.ssh/config.
+- edit-config: Open config file in your default editor (respects `$EDITOR`).
 - completion: Emit shell completion script.
 - remove: Delete a profile (and optionally its stored password).
 
@@ -242,6 +247,36 @@ GCP gcloud:
 ./veessh add gce-private --type gcloud --host internal-vm --gcp-project myproject --gcp-zone us-east1-b --gcp-tunnel
 ```
 
+Onboarding and configuration:
+
+```bash
+# First-time setup: run veessh with no profiles to launch interactive wizard
+./veessh
+
+# Edit config file directly in your editor
+./veessh edit-config                    # Uses $EDITOR or defaults to vi
+EDITOR=nano ./veessh edit-config        # Use specific editor
+EDITOR=code ./veessh edit-config        # Use VS Code
+```
+
+1Password integration:
+
+```bash
+# 1Password is automatically used if 'op' CLI is installed and signed in
+# Passwords are stored as "veessh - <profile-name>" items in 1Password
+
+# Force 1Password backend
+export VEESSH_CREDENTIALS_BACKEND=1password
+./veessh add mybox --host example.com --user alice --ask-password
+
+# Force system keyring backend
+export VEESSH_CREDENTIALS_BACKEND=keyring
+./veessh add mybox --host example.com --user alice --ask-password
+
+# Auto-detect (default: prefers 1Password if available, falls back to keyring)
+export VEESSH_CREDENTIALS_BACKEND=auto
+```
+
 Profile inheritance (templates):
 
 ```bash
@@ -306,10 +341,29 @@ Completions:
 ./veessh completion powershell > veessh.ps1
 ```
 
+Security
+
+**Password Storage:**
+- Passwords are stored securely using your system's keychain or 1Password
+- 1Password integration: Automatically detected if `op` CLI is installed and signed in
+- System keyring: Falls back to macOS Keychain, Linux Secret Service, or Windows Credential Manager
+- Passwords are never stored in plain text or in the config file
+
+**SSH Keys:**
+- Private keys remain on disk (typically `~/.ssh/`)
+- Ensure proper file permissions: `chmod 600 ~/.ssh/id_*`
+- Consider using SSH agent (`ssh-add`) for added security
+- Keys are never stored by veessh; only paths are referenced
+
+**Config File:**
+- Config file permissions: `~/.config/veessh/config.yaml` (mode 600)
+- Passwords are never included in config or exports
+- Use `veessh export` to share profiles without credentials
+
 Roadmap
 
 - Rich TUI picker with columns and quick actions
-- Secrets integration: 1Password/Bitwarden/AWS Secrets Manager
+- Additional secrets backends: Bitwarden, AWS Secrets Manager
 - Additional transports: serial, RDP
 - Advanced proxy: SOCKS/HTTP, ProxyCommand, multi-hop chains
 
