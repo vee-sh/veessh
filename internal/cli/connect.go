@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"time"
 
@@ -60,7 +61,11 @@ Examples:
 		if err != nil {
 			return err
 		}
-		password, _ := credentials.GetPassword(name)
+		password, err := credentials.GetPassword(name)
+		if err != nil {
+			// Non-fatal: log but continue (password might not be stored)
+			fmt.Fprintf(os.Stderr, "Warning: failed to retrieve password: %v\n", err)
+		}
 
 		// Audit log: connection start
 		startTime := time.Now()

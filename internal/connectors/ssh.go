@@ -2,6 +2,8 @@ package connectors
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -14,7 +16,7 @@ type sshConnector struct{}
 
 func (s *sshConnector) Name() string { return "ssh" }
 
-func (s *sshConnector) Exec(ctx context.Context, p config.Profile, _ string) error {
+func (s *sshConnector) Exec(ctx context.Context, p config.Profile, password string) error {
 	args := []string{}
 	if p.Port > 0 {
 		args = append(args, "-p", strconv.Itoa(p.Port))
@@ -68,8 +70,62 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, _ string) err
 		args = append(args, remoteCmd)
 	}
 
+	// If password is provided, try to use sshpass or SSH_ASKPASS
+	if password != "" && p.IdentityFile == "" && !p.UseAgent {
+		return s.execWithPassword(ctx, args, password)
+	}
+
 	cmd := exec.CommandContext(ctx, "ssh", args...)
 	return util.RunAttached(cmd)
+}
+
+// execWithPassword executes SSH with password authentication
+func (s *sshConnector) execWithPassword(ctx context.Context, sshArgs []string, password string) error {
+	// Try sshpass first (if available) - this is the most reliable method
+	if sshpassPath := findExecutable("sshpass"); sshpassPath != "" {
+		args := []string{"-e", "ssh"}
+		args = append(args, sshArgs...)
+		cmd := exec.CommandContext(ctx, sshpassPath, args...)
+		cmd.Env = append(os.Environ(), "SSHPASS="+password)
+		return util.RunAttached(cmd)
+	}
+
+	// sshpass not available - fall back to interactive prompt
+	// Note: SSH doesn't support password via command line for security reasons
+	fmt.Fprintf(os.Stderr, "Note: Password is stored but sshpass is not installed.\n")
+	fmt.Fprintf(os.Stderr, "Install sshpass for automatic password injection: brew install hudochenkov/sshpass/sshpass\n")
+	fmt.Fprintf(os.Stderr, "You will be prompted for the password below.\n\n")
+	
+	cmd := exec.CommandContext(ctx, "ssh", sshArgs...)
+	return util.RunAttached(cmd)
+}
+
+// findExecutable finds an executable in PATH
+func findExecutable(name string) string {
+	path, err := exec.LookPath(name)
+	if err != nil {
+		return ""
+	}
+	return path
+}
+
+// createSSHAskPassScript creates a temporary script that outputs the password
+func createSSHAskPassScript(password string) (string, error) {
+	tmpFile, err := os.CreateTemp("", "veessh-askpass-*")
+	if err != nil {
+		return "", err
+	}
+	scriptPath := tmpFile.Name()
+	tmpFile.Close()
+
+	// Write the script
+	script := "#!/bin/sh\necho \"" + strings.ReplaceAll(password, "\"", "\\\"") + "\"\n"
+	if err := os.WriteFile(scriptPath, []byte(script), 0o700); err != nil {
+		os.Remove(scriptPath)
+		return "", err
+	}
+
+	return scriptPath, nil
 }
 
 // buildRemoteCommand constructs the command to run on the remote host

@@ -148,7 +148,11 @@ func runInteractive(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	password, _ := credentials.GetPassword(p.Name)
+	password, err := credentials.GetPassword(p.Name)
+	if err != nil {
+		// Non-fatal: log but continue (password might not be stored)
+		fmt.Fprintf(os.Stderr, "Warning: failed to retrieve password: %v\n", err)
+	}
 
 	// Audit log: connection start
 	startTime := time.Now()

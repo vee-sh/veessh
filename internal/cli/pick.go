@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -51,7 +52,11 @@ var cmdPick = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		password, _ := credentials.GetPassword(p.Name)
+		password, err := credentials.GetPassword(p.Name)
+		if err != nil {
+			// Non-fatal: log but continue (password might not be stored)
+			fmt.Fprintf(os.Stderr, "Warning: failed to retrieve password: %v\n", err)
+		}
 		if err := conn.Exec(cmd.Context(), p, password); err != nil {
 			if errors.Is(err, context.Canceled) {
 				return context.Canceled
