@@ -71,8 +71,7 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, password stri
 		// Disable all other auth methods to force password-only
 		args = append(args, "-o", "PreferredAuthentications=password")
 		args = append(args, "-o", "PubkeyAuthentication=no")
-		args = append(args, "-o", "KeyboardInteractiveAuthentication=no")
-		args = append(args, "-o", "GSSAPIAuthentication=no")
+		args = append(args, "-o", "ChallengeResponseAuthentication=no")
 	}
 
 	if len(p.ExtraArgs) > 0 {
