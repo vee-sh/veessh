@@ -72,6 +72,8 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, password stri
 		args = append(args, "-o", "PreferredAuthentications=password")
 		args = append(args, "-o", "PubkeyAuthentication=no")
 		args = append(args, "-o", "ChallengeResponseAuthentication=no")
+		// Add timeout to prevent hanging
+		args = append(args, "-o", "ConnectTimeout=10")
 	}
 
 	if len(p.ExtraArgs) > 0 {
@@ -111,17 +113,25 @@ func (s *sshConnector) execWithPassword(ctx context.Context, sshArgs []string, p
 
 	// Try sshpass first (if available) - this is the most reliable method
 	if sshpassPath := findExecutable("sshpass"); sshpassPath != "" {
-		// Use -p flag instead of -e to pass password directly
-		// This is more reliable than environment variable
-		args := []string{"-p", password, "ssh"}
+		// Clean password: remove any trailing newlines/whitespace that might cause issues
+		cleanPassword := strings.TrimSpace(password)
+		
+		// Use -e flag with environment variable (more secure, avoids password in process list)
+		args := []string{"-e", "ssh"}
 		args = append(args, sshArgs...)
 		cmd := exec.CommandContext(ctx, sshpassPath, args...)
+		cmd.Env = append(os.Environ(), "SSHPASS="+cleanPassword)
 		err := util.RunAttached(cmd)
 		if err != nil {
 			// Check if it's an authentication failure
-			if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 5 {
-				fmt.Fprintf(os.Stderr, "\n⚠️  Authentication failed. The stored password may be incorrect.\n")
-				fmt.Fprintf(os.Stderr, "   Update the password with: veessh edit %s --ask-password\n", profileName)
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				switch exitErr.ExitCode() {
+				case 5:
+					fmt.Fprintf(os.Stderr, "\n⚠️  Authentication failed. The stored password may be incorrect.\n")
+					fmt.Fprintf(os.Stderr, "   Update the password with: veessh edit %s --ask-password\n", profileName)
+				case 6:
+					fmt.Fprintf(os.Stderr, "\n⚠️  Host key verification failed.\n")
+				}
 			}
 		}
 		return err

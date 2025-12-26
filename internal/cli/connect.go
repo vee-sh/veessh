@@ -66,6 +66,12 @@ Examples:
 			// Non-fatal: log but continue (password might not be stored)
 			fmt.Fprintf(os.Stderr, "Warning: failed to retrieve password: %v\n", err)
 		}
+		// Debug: check if password was retrieved (don't print the actual password)
+		if password != "" {
+			fmt.Fprintf(os.Stderr, "Debug: Password retrieved (length: %d)\n", len(password))
+		} else {
+			fmt.Fprintf(os.Stderr, "Debug: No password stored for profile %s\n", name)
+		}
 
 		// Audit log: connection start
 		startTime := time.Now()
