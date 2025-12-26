@@ -262,19 +262,38 @@ EDITOR=code ./veessh edit-config        # Use VS Code
 1Password integration:
 
 ```bash
-# 1Password is automatically used if 'op' CLI is installed and signed in
-# Passwords are stored as "veessh - <profile-name>" items in 1Password
+# Step 1: Install 1Password CLI
+# macOS: brew install --cask 1password-cli
+# Or download from: https://developer.1password.com/docs/cli/get-started
 
-# Force 1Password backend
+# Step 2: Sign in to 1Password
+op signin
+
+# Step 3: veessh will automatically detect and use 1Password
+# Passwords are stored as "veessh - <profile-name>" items in 1Password
+./veessh add mybox --host example.com --user alice --ask-password
+
+# Force 1Password backend (if auto-detection fails)
 export VEESSH_CREDENTIALS_BACKEND=1password
 ./veessh add mybox --host example.com --user alice --ask-password
 
-# Force system keyring backend
+# Force system keyring backend (skip 1Password)
 export VEESSH_CREDENTIALS_BACKEND=keyring
 ./veessh add mybox --host example.com --user alice --ask-password
 
 # Auto-detect (default: prefers 1Password if available, falls back to keyring)
 export VEESSH_CREDENTIALS_BACKEND=auto
+```
+
+Password usage with sshpass:
+
+```bash
+# Install sshpass for automatic password injection
+# macOS: brew install hudochenkov/sshpass/sshpass
+# Linux: sudo apt-get install sshpass
+
+# After installing sshpass, stored passwords are used automatically
+./veessh connect mybox  # Password injected automatically if stored
 ```
 
 Profile inheritance (templates):

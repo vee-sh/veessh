@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -12,6 +13,15 @@ import (
 	"github.com/vee-sh/veessh/internal/config"
 	"github.com/vee-sh/veessh/internal/credentials"
 )
+
+// findExecutable finds an executable in PATH
+func findExecutable(name string) string {
+	path, err := exec.LookPath(name)
+	if err != nil {
+		return ""
+	}
+	return path
+}
 
 // runOnboardingWizard guides first-time users through creating their first profile
 func runOnboardingWizard(cfgPath string) error {
@@ -124,10 +134,19 @@ func runOnboardingWizard(cfgPath string) error {
 	if answers.Identity == "" && !answers.UseAgent {
 		askPassword = true
 	} else {
+		helpMsg := "Store password securely in system keychain"
+		// Check if 1Password is available
+		if opPath := findExecutable("op"); opPath != "" {
+			// Check if signed in
+			cmd := exec.Command("op", "account", "list")
+			if cmd.Run() == nil {
+				helpMsg = "Store password securely in 1Password (detected) or system keychain"
+			}
+		}
 		if err := survey.AskOne(&survey.Confirm{
 			Message: "Store password in keychain?",
 			Default: false,
-			Help:    "Store password securely in system keychain (or 1Password if configured)",
+			Help:    helpMsg,
 		}, &askPassword); err != nil {
 			return err
 		}
@@ -206,11 +225,34 @@ func runOnboardingWizard(cfgPath string) error {
 	}
 
 	fmt.Printf("\n✓ Profile '%s' created successfully!\n", answers.Name)
+	
+	// Show helpful tips
 	fmt.Println("\nYou can now:")
 	fmt.Printf("  veessh connect %s\n", answers.Name)
 	fmt.Println("  veessh                    # Interactive picker")
 	fmt.Println("  veessh list                # List all profiles")
 	fmt.Println("  veessh edit-config         # Edit config file directly")
+	
+	// Show password usage tip if password was stored
+	if answers.Password != "" {
+		fmt.Println("\n💡 Password tips:")
+		if findExecutable("sshpass") == "" {
+			fmt.Println("  - Install 'sshpass' for automatic password injection:")
+			fmt.Println("    macOS:   brew install hudochenkov/sshpass/sshpass")
+			fmt.Println("    Linux:   sudo apt-get install sshpass")
+			fmt.Println("  - Without sshpass, you'll be prompted for the password")
+		} else {
+			fmt.Println("  - Password will be injected automatically (sshpass detected)")
+		}
+	}
+	
+	// Show 1Password tip if not using it
+	if opPath := findExecutable("op"); opPath == "" {
+		fmt.Println("\n💡 1Password integration:")
+		fmt.Println("  - Install 1Password CLI: brew install --cask 1password-cli")
+		fmt.Println("  - Sign in: op signin")
+		fmt.Println("  - veessh will automatically use 1Password for password storage")
+	}
 
 	return nil
 }
