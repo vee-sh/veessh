@@ -273,6 +273,9 @@ op signin
 # Passwords are stored as "veessh - <profile-name>" items in 1Password
 ./veessh add mybox --host example.com --user alice --ask-password
 
+# Verify 1Password is being used
+# Check: op item list | grep "veessh"
+
 # Force 1Password backend (if auto-detection fails)
 export VEESSH_CREDENTIALS_BACKEND=1password
 ./veessh add mybox --host example.com --user alice --ask-password
