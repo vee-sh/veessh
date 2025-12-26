@@ -67,7 +67,8 @@ type Profile struct {
 }
 
 type Config struct {
-	Profiles map[string]Profile `yaml:"profiles"`
+	DefaultBackend string            `yaml:"defaultBackend,omitempty"` // Default credential backend: "auto", "1password", "keyring", or "file"
+	Profiles       map[string]Profile `yaml:"profiles"`
 }
 
 func DefaultPath() (string, error) {

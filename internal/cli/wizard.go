@@ -26,7 +26,8 @@ func findExecutable(name string) string {
 // runOnboardingWizard guides first-time users through creating their first profile
 func runOnboardingWizard(cfgPath string) error {
 	fmt.Println("Welcome to veessh!")
-	fmt.Println("Let's create your first connection profile.\n")
+	fmt.Println("Let's create your first connection profile.")
+	fmt.Println()
 
 	var answers struct {
 		Name     string

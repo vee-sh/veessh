@@ -65,16 +65,17 @@ Key features
 - Graceful Ctrl+C: clean cancellation with "ok. exiting"
 - **TUI onboarding wizard**: First-time users get an interactive setup wizard
 - **Config editor**: `veessh edit-config` opens config in your editor (vi/vim/nano/etc)
-- **1Password integration**: Store passwords in 1Password instead of system keychain
+- **Multiple password backends**: 1Password, system keyring, or encrypted file (works on all platforms)
 
 Notes
 
 - veessh uses your system's native tools (ssh, sftp, telnet). Ensure they are
   installed and in PATH.
-- **Password storage**: Passwords are stored securely using:
+- **Password storage**: Passwords are stored securely using (auto-detected in priority order):
   - **1Password** (if `op` CLI is installed and signed in) - automatically detected
-  - **System keychain** (macOS Keychain, Linux Secret Service, Windows Credential Manager) - fallback
-  - Set `VEESSH_CREDENTIALS_BACKEND=1password` or `VEESSH_CREDENTIALS_BACKEND=keyring` to force a specific backend
+  - **System keyring** (macOS Keychain, Linux Secret Service, Windows Credential Manager)
+  - **Encrypted file** (AES-256-GCM, works on all platforms) - universal fallback
+  - Set `VEESSH_CREDENTIALS_BACKEND=1password`, `VEESSH_CREDENTIALS_BACKEND=keyring`, or `VEESSH_CREDENTIALS_BACKEND=file` to force a specific backend
 - **SSH keys**: Private keys are stored on disk (typically `~/.ssh/`). Ensure proper permissions (600) and consider using SSH agent for added security.
 - Config lives at `~/.config/veessh/config.yaml` by default.
 
@@ -102,6 +103,8 @@ Core commands
 - export / import: Export/import profiles (YAML; no passwords).
 - import-ssh: Import from ~/.ssh/config.
 - edit-config: Open config file in your default editor (respects `$EDITOR`).
+- set-backend: Set the default credential backend in config file.
+- migrate: Migrate passwords from one backend to another.
 - completion: Emit shell completion script.
 - remove: Delete a profile (and optionally its stored password).
 
@@ -259,7 +262,11 @@ EDITOR=nano ./veessh edit-config        # Use specific editor
 EDITOR=code ./veessh edit-config        # Use VS Code
 ```
 
-1Password integration:
+Password storage backends:
+
+veessh supports multiple password storage backends, automatically selecting the best available option:
+
+**1Password integration:**
 
 ```bash
 # Step 1: Install 1Password CLI
@@ -279,13 +286,66 @@ op signin
 # Force 1Password backend (if auto-detection fails)
 export VEESSH_CREDENTIALS_BACKEND=1password
 ./veessh add mybox --host example.com --user alice --ask-password
+```
 
-# Force system keyring backend (skip 1Password)
+**System keyring (macOS Keychain, Linux Secret Service, Windows Credential Manager):**
+
+```bash
+# Force system keyring backend
 export VEESSH_CREDENTIALS_BACKEND=keyring
 ./veessh add mybox --host example.com --user alice --ask-password
+```
 
-# Auto-detect (default: prefers 1Password if available, falls back to keyring)
+**Encrypted file backend (works on all platforms):**
+
+```bash
+# Force encrypted file backend (universal fallback)
+export VEESSH_CREDENTIALS_BACKEND=file
+./veessh add mybox --host example.com --user alice --ask-password
+
+# Passwords are stored in ~/.config/veessh/passwords.enc
+# Encrypted with AES-256-GCM using a key derived from your home directory
+```
+
+**Auto-detection (default):**
+
+```bash
+# Auto-detect backend priority:
+# 1. 1Password (if op CLI is installed and signed in)
+# 2. System keyring (macOS Keychain, Linux Secret Service, Windows Credential Manager)
+# 3. Encrypted file (universal fallback, works everywhere)
 export VEESSH_CREDENTIALS_BACKEND=auto
+# or simply don't set the variable (auto is the default)
+```
+
+**Setting default backend in config:**
+
+```bash
+# Set default backend in config file (persists across sessions)
+# Useful for different defaults on different machines
+veessh set-backend 1password  # Use 1Password on personal Mac
+veessh set-backend file       # Use file backend on work laptop
+
+# Priority: environment variable > config file > default (auto)
+# Environment variable always takes precedence
+```
+
+**Migrating passwords between backends:**
+
+```bash
+# Migrate all passwords from keyring to 1Password
+veessh migrate keyring 1password
+
+# Migrate from file to keyring
+veessh migrate file keyring
+
+# Migrate all passwords to file backend
+veessh migrate auto file
+
+# Migration will:
+# - Skip profiles without passwords
+# - Skip profiles that already exist in destination
+# - Show progress and summary
 ```
 
 Password usage with sshpass:
@@ -366,10 +426,12 @@ Completions:
 Security
 
 **Password Storage:**
-- Passwords are stored securely using your system's keychain or 1Password
-- 1Password integration: Automatically detected if `op` CLI is installed and signed in
-- System keyring: Falls back to macOS Keychain, Linux Secret Service, or Windows Credential Manager
+- Passwords are stored securely using one of three backends (auto-detected):
+  1. **1Password**: Automatically detected if `op` CLI is installed and signed in
+  2. **System keyring**: macOS Keychain, Linux Secret Service, or Windows Credential Manager
+  3. **Encrypted file**: AES-256-GCM encrypted file (`~/.config/veessh/passwords.enc`) - universal fallback that works on all platforms
 - Passwords are never stored in plain text or in the config file
+- The encrypted file backend ensures veessh works even when system keyring is unavailable
 
 **Password Usage:**
 - Stored passwords are automatically used for SSH connections when `sshpass` is installed

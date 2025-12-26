@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/99designs/keyring"
+	"github.com/vee-sh/veessh/internal/config"
 )
 
 const serviceName = "veessh"
@@ -13,9 +14,10 @@ const serviceName = "veessh"
 type BackendType string
 
 const (
-	BackendAuto      BackendType = "auto"      // Auto-detect (prefer 1Password if available)
+	BackendAuto      BackendType = "auto"      // Auto-detect (prefer 1Password if available, then keyring, then file)
 	BackendKeyring   BackendType = "keyring"   // System keyring
 	Backend1Password BackendType = "1password" // 1Password CLI
+	BackendFile     BackendType = "file"      // Encrypted file (works on all platforms)
 )
 
 var (
@@ -44,9 +46,19 @@ func getBackend() (Backend, error) {
 		return currentBackend, nil
 	}
 
-	// Check environment variable
+	// Priority: environment variable > config file > default (auto)
+	// Check environment variable first (highest priority)
 	if envBackend := os.Getenv("VEESSH_CREDENTIALS_BACKEND"); envBackend != "" {
 		backendType = BackendType(envBackend)
+	} else {
+		// Check config file for default backend
+		cfgPath, err := config.DefaultPath()
+		if err == nil {
+			cfg, err := config.Load(cfgPath)
+			if err == nil && cfg.DefaultBackend != "" {
+				backendType = BackendType(cfg.DefaultBackend)
+			}
+		}
 	}
 
 	// Initialize backend
@@ -61,27 +73,59 @@ func getBackend() (Backend, error) {
 
 	case BackendKeyring:
 		kr := &KeyringBackend{}
+		// Test if keyring works, fall back to file if it fails
+		if _, err := kr.openRing(); err != nil {
+			// Keyring not available, fall back to file backend
+			fileBackend, err := NewFileBackend()
+			if err != nil {
+				return nil, fmt.Errorf("keyring not available and file backend failed: %w", err)
+			}
+			currentBackend = fileBackend
+			return currentBackend, nil
+		}
 		currentBackend = kr
+		return currentBackend, nil
+
+	case BackendFile:
+		fileBackend, err := NewFileBackend()
+		if err != nil {
+			return nil, fmt.Errorf("file backend failed: %w", err)
+		}
+		currentBackend = fileBackend
 		return currentBackend, nil
 
 	case BackendAuto:
 		fallthrough
 	default:
-		// Try 1Password first, fall back to keyring
+		// Try 1Password first
 		op := NewOnePasswordBackend("")
 		if op.IsAvailable() {
 			currentBackend = op
 			return currentBackend, nil
 		}
-		// Fall back to keyring
+		// Try keyring second
 		kr := &KeyringBackend{}
-		currentBackend = kr
+		if _, err := kr.openRing(); err == nil {
+			currentBackend = kr
+			return currentBackend, nil
+		}
+		// Fall back to file backend (works everywhere)
+		fileBackend, err := NewFileBackend()
+		if err != nil {
+			return nil, fmt.Errorf("all backends failed, file backend error: %w", err)
+		}
+		currentBackend = fileBackend
 		return currentBackend, nil
 	}
 }
 
 // KeyringBackend provides password storage using system keyring
 type KeyringBackend struct{}
+
+// NewKeyringBackend creates a new keyring backend
+func NewKeyringBackend() *KeyringBackend {
+	return &KeyringBackend{}
+}
 
 func (k *KeyringBackend) openRing() (keyring.Keyring, error) {
 	return keyring.Open(keyring.Config{ServiceName: serviceName})
@@ -147,4 +191,9 @@ func DeletePassword(profileName string) error {
 		return err
 	}
 	return backend.DeletePassword(profileName)
+}
+
+// GetBackend returns the current backend instance (for migration/testing)
+func GetBackend() (Backend, error) {
+	return getBackend()
 }

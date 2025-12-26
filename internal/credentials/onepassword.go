@@ -88,7 +88,7 @@ func (op *OnePasswordBackend) GetPassword(profileName string) (string, error) {
 	}
 
 	itemRef := op.getItemRef(profileName)
-	args := []string{"item", "get", itemRef, "--fields", "label=password"}
+	args := []string{"item", "get", itemRef, "--fields", "label=password", "--reveal"}
 	if op.vault != "" {
 		args = append(args, "--vault", op.vault)
 	}

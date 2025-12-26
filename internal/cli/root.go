@@ -63,6 +63,8 @@ func addSubcommands() {
 	rootCmd.AddCommand(cmdImport)
 	rootCmd.AddCommand(cmdImportSSH)
 	rootCmd.AddCommand(cmdEditConfig)
+	rootCmd.AddCommand(cmdSetBackend)
+	rootCmd.AddCommand(cmdMigrate)
 	rootCmd.AddCommand(cmdCompletion)
 	rootCmd.AddCommand(cmdVersion)
 }
