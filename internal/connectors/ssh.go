@@ -93,7 +93,7 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, password stri
 
 	// If password is provided, use execWithPassword
 	if password != "" && p.IdentityFile == "" {
-		return s.execWithPassword(ctx, args, password)
+		return s.execWithPassword(ctx, args, password, p.Name)
 	}
 
 	cmd := exec.CommandContext(ctx, "ssh", args...)
@@ -101,7 +101,7 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, password stri
 }
 
 // execWithPassword executes SSH with password authentication
-func (s *sshConnector) execWithPassword(ctx context.Context, sshArgs []string, password string) error {
+func (s *sshConnector) execWithPassword(ctx context.Context, sshArgs []string, password string, profileName string) error {
 	// Verify password is not empty
 	if password == "" {
 		fmt.Fprintf(os.Stderr, "Warning: Password is empty. You will be prompted.\n")
@@ -111,16 +111,17 @@ func (s *sshConnector) execWithPassword(ctx context.Context, sshArgs []string, p
 
 	// Try sshpass first (if available) - this is the most reliable method
 	if sshpassPath := findExecutable("sshpass"); sshpassPath != "" {
-		args := []string{"-e", "ssh"}
+		// Use -p flag instead of -e to pass password directly
+		// This is more reliable than environment variable
+		args := []string{"-p", password, "ssh"}
 		args = append(args, sshArgs...)
 		cmd := exec.CommandContext(ctx, sshpassPath, args...)
-		cmd.Env = append(os.Environ(), "SSHPASS="+password)
 		err := util.RunAttached(cmd)
 		if err != nil {
 			// Check if it's an authentication failure
 			if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 5 {
 				fmt.Fprintf(os.Stderr, "\n⚠️  Authentication failed. The stored password may be incorrect.\n")
-				fmt.Fprintf(os.Stderr, "   Update the password with: veessh edit a13xv33 --ask-password\n")
+				fmt.Fprintf(os.Stderr, "   Update the password with: veessh edit %s --ask-password\n", profileName)
 			}
 		}
 		return err
