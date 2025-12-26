@@ -53,6 +53,25 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, password stri
 		}
 	}
 
+	// If password is provided and no identity file, configure SSH for password auth
+	// Note: We inject password even if UseAgent is true, as SSH may fall back
+	// to password auth if the agent doesn't have the right key
+	if password != "" && p.IdentityFile == "" {
+		// Check if sshpass is available and warn if not
+		if findExecutable("sshpass") == "" {
+			fmt.Fprintf(os.Stderr, "⚠️  Password is stored but 'sshpass' is not installed.\n")
+			fmt.Fprintf(os.Stderr, "   Install it for automatic password injection:\n")
+			fmt.Fprintf(os.Stderr, "   macOS:   brew install hudochenkov/sshpass/sshpass\n")
+			fmt.Fprintf(os.Stderr, "   Linux:   sudo apt-get install sshpass  (or sudo yum install sshpass)\n")
+			fmt.Fprintf(os.Stderr, "   You will be prompted for the password below.\n\n")
+		}
+		// When using password auth, prefer password over agent/keyboard-interactive
+		// This ensures sshpass can inject the password reliably
+		// IMPORTANT: These options must come BEFORE the host argument
+		args = append(args, "-o", "PreferredAuthentications=password")
+		args = append(args, "-o", "PubkeyAuthentication=no")
+	}
+
 	if len(p.ExtraArgs) > 0 {
 		args = append(args, p.ExtraArgs...)
 	}
@@ -70,22 +89,8 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, password stri
 		args = append(args, remoteCmd)
 	}
 
-	// If password is provided and no identity file, try to use it
-	// Note: We inject password even if UseAgent is true, as SSH may fall back
-	// to password auth if the agent doesn't have the right key
+	// If password is provided, use execWithPassword
 	if password != "" && p.IdentityFile == "" {
-		// Check if sshpass is available and warn if not
-		if findExecutable("sshpass") == "" {
-			fmt.Fprintf(os.Stderr, "⚠️  Password is stored but 'sshpass' is not installed.\n")
-			fmt.Fprintf(os.Stderr, "   Install it for automatic password injection:\n")
-			fmt.Fprintf(os.Stderr, "   macOS:   brew install hudochenkov/sshpass/sshpass\n")
-			fmt.Fprintf(os.Stderr, "   Linux:   sudo apt-get install sshpass  (or sudo yum install sshpass)\n")
-			fmt.Fprintf(os.Stderr, "   You will be prompted for the password below.\n\n")
-		}
-		// When using password auth, prefer password over agent/keyboard-interactive
-		// This ensures sshpass can inject the password reliably
-		args = append(args, "-o", "PreferredAuthentications=password")
-		args = append(args, "-o", "PubkeyAuthentication=no")
 		return s.execWithPassword(ctx, args, password)
 	}
 
