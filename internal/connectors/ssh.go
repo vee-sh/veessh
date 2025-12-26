@@ -68,8 +68,11 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, password stri
 		// When using password auth, prefer password over agent/keyboard-interactive
 		// This ensures sshpass can inject the password reliably
 		// IMPORTANT: These options must come BEFORE the host argument
+		// Disable all other auth methods to force password-only
 		args = append(args, "-o", "PreferredAuthentications=password")
 		args = append(args, "-o", "PubkeyAuthentication=no")
+		args = append(args, "-o", "KeyboardInteractiveAuthentication=no")
+		args = append(args, "-o", "GSSAPIAuthentication=no")
 	}
 
 	if len(p.ExtraArgs) > 0 {
@@ -100,13 +103,28 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, password stri
 
 // execWithPassword executes SSH with password authentication
 func (s *sshConnector) execWithPassword(ctx context.Context, sshArgs []string, password string) error {
+	// Verify password is not empty
+	if password == "" {
+		fmt.Fprintf(os.Stderr, "Warning: Password is empty. You will be prompted.\n")
+		cmd := exec.CommandContext(ctx, "ssh", sshArgs...)
+		return util.RunAttached(cmd)
+	}
+
 	// Try sshpass first (if available) - this is the most reliable method
 	if sshpassPath := findExecutable("sshpass"); sshpassPath != "" {
 		args := []string{"-e", "ssh"}
 		args = append(args, sshArgs...)
 		cmd := exec.CommandContext(ctx, sshpassPath, args...)
 		cmd.Env = append(os.Environ(), "SSHPASS="+password)
-		return util.RunAttached(cmd)
+		err := util.RunAttached(cmd)
+		if err != nil {
+			// Check if it's an authentication failure
+			if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 5 {
+				fmt.Fprintf(os.Stderr, "\n⚠️  Authentication failed. The stored password may be incorrect.\n")
+				fmt.Fprintf(os.Stderr, "   Update the password with: veessh edit a13xv33 --ask-password\n")
+			}
+		}
+		return err
 	}
 
 	// Fallback: Use SSH_ASKPASS with a helper script
