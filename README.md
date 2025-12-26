@@ -349,6 +349,13 @@ Security
 - System keyring: Falls back to macOS Keychain, Linux Secret Service, or Windows Credential Manager
 - Passwords are never stored in plain text or in the config file
 
+**Password Usage:**
+- Stored passwords are automatically used for SSH connections when `sshpass` is installed
+- Without `sshpass`, SSH will prompt for the password (password is still stored for future use)
+- Install `sshpass` for automatic password injection:
+  - macOS: `brew install hudochenkov/sshpass/sshpass`
+  - Linux: `sudo apt-get install sshpass` (Debian/Ubuntu) or `sudo yum install sshpass` (RHEL/CentOS)
+
 **SSH Keys:**
 - Private keys remain on disk (typically `~/.ssh/`)
 - Ensure proper file permissions: `chmod 600 ~/.ssh/id_*`

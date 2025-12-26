@@ -90,14 +90,59 @@ func (s *sshConnector) execWithPassword(ctx context.Context, sshArgs []string, p
 		return util.RunAttached(cmd)
 	}
 
-	// sshpass not available - fall back to interactive prompt
-	// Note: SSH doesn't support password via command line for security reasons
-	fmt.Fprintf(os.Stderr, "Note: Password is stored but sshpass is not installed.\n")
-	fmt.Fprintf(os.Stderr, "Install sshpass for automatic password injection: brew install hudochenkov/sshpass/sshpass\n")
-	fmt.Fprintf(os.Stderr, "You will be prompted for the password below.\n\n")
+	// Fallback: Use SSH_ASKPASS with a helper script
+	// This works by creating a temporary script that outputs the password
+	tmpScript, err := createSSHAskPassScript(password)
+	if err != nil {
+		// If we can't create the script, fall back to interactive prompt
+		fmt.Fprintf(os.Stderr, "Warning: Could not create SSH_ASKPASS script. Password will be prompted.\n")
+		cmd := exec.CommandContext(ctx, "ssh", sshArgs...)
+		return util.RunAttached(cmd)
+	}
+	defer os.Remove(tmpScript)
+
+	// SSH_ASKPASS requires:
+	// 1. DISPLAY environment variable (even on non-X11 systems)
+	// 2. SSH_ASKPASS pointing to our script
+	// 3. stdin must NOT be a TTY (SSH won't use SSH_ASKPASS if stdin is a TTY)
+	// 4. We need to detach from the controlling terminal
 	
-	cmd := exec.CommandContext(ctx, "ssh", sshArgs...)
-	return util.RunAttached(cmd)
+	// Try using 'setsid' or 'nohup' to detach from TTY
+	var cmd *exec.Cmd
+	if setsidPath := findExecutable("setsid"); setsidPath != "" {
+		// Use setsid to create a new session (detaches from TTY)
+		cmd = exec.CommandContext(ctx, setsidPath, "ssh")
+		cmd.Args = append(cmd.Args, sshArgs...)
+	} else {
+		// Fallback: try with nohup or just ssh
+		// Note: This may not work if we're attached to a TTY
+		cmd = exec.CommandContext(ctx, "ssh", sshArgs...)
+	}
+
+	cmd.Env = append(os.Environ(),
+		"SSH_ASKPASS="+tmpScript,
+		"DISPLAY=:0", // Required even on non-X11 systems
+		"SSH_ASKPASS_REQUIRE=force", // Force SSH to use SSH_ASKPASS
+	)
+	
+	// Don't attach stdin - SSH_ASKPASS only works when stdin is not a TTY
+	// We'll attach stdout/stderr for interactive session
+	cmd.Stdin = nil
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		// If SSH_ASKPASS failed, fall back to interactive prompt
+		// This can happen if we're attached to a TTY
+		fmt.Fprintf(os.Stderr, "Note: Automatic password injection failed. You will be prompted for the password.\n")
+		fmt.Fprintf(os.Stderr, "Tip: Install 'sshpass' for more reliable automatic password injection:\n")
+		fmt.Fprintf(os.Stderr, "  brew install hudochenkov/sshpass/sshpass\n\n")
+		
+		cmd := exec.CommandContext(ctx, "ssh", sshArgs...)
+		return util.RunAttached(cmd)
+	}
+
+	return nil
 }
 
 // findExecutable finds an executable in PATH
