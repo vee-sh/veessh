@@ -70,8 +70,10 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, password stri
 		args = append(args, remoteCmd)
 	}
 
-	// If password is provided, try to use sshpass or SSH_ASKPASS
-	if password != "" && p.IdentityFile == "" && !p.UseAgent {
+	// If password is provided and no identity file, try to use it
+	// Note: We inject password even if UseAgent is true, as SSH may fall back
+	// to password auth if the agent doesn't have the right key
+	if password != "" && p.IdentityFile == "" {
 		// Check if sshpass is available and warn if not
 		if findExecutable("sshpass") == "" {
 			fmt.Fprintf(os.Stderr, "⚠️  Password is stored but 'sshpass' is not installed.\n")
