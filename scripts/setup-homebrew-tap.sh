@@ -57,7 +57,7 @@ cat > Formula/veessh.rb << EOF
 class Veessh < Formula
   desc "Console connection manager for SSH/SFTP/Telnet/Mosh/SSM/GCloud"
   homepage "https://github.com/${OWNER}/veessh"
-  version "0.5.0"
+  version "0.5.1"
   license "Apache-2.0"
 
   on_macos do
