@@ -82,6 +82,10 @@ func (s *sshConnector) Exec(ctx context.Context, p config.Profile, password stri
 			fmt.Fprintf(os.Stderr, "   Linux:   sudo apt-get install sshpass  (or sudo yum install sshpass)\n")
 			fmt.Fprintf(os.Stderr, "   You will be prompted for the password below.\n\n")
 		}
+		// When using password auth, prefer password over agent/keyboard-interactive
+		// This ensures sshpass can inject the password reliably
+		args = append(args, "-o", "PreferredAuthentications=password")
+		args = append(args, "-o", "PubkeyAuthentication=no")
 		return s.execWithPassword(ctx, args, password)
 	}
 
