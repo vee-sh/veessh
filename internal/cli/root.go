@@ -64,6 +64,7 @@ func addSubcommands() {
 	rootCmd.AddCommand(cmdBackends)
 	rootCmd.AddCommand(cmdCompletion)
 	rootCmd.AddCommand(cmdVersion)
+	rootCmd.AddCommand(cmdTUI)
 }
 
 var flagJSON bool
