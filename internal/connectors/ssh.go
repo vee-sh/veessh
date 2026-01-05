@@ -208,10 +208,18 @@ func createSSHAskPassScript(password string) (string, error) {
 		return "", err
 	}
 	scriptPath := tmpFile.Name()
-	tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		os.Remove(scriptPath)
+		return "", fmt.Errorf("failed to close temp file: %w", err)
+	}
 
-	// Write the script
-	script := "#!/bin/sh\necho \"" + strings.ReplaceAll(password, "\"", "\\\"") + "\"\n"
+	// Write the script with proper escaping for shell special characters
+	// Use printf instead of echo for better control over special characters
+	escapedPassword := strings.ReplaceAll(password, "\\", "\\\\")
+	escapedPassword = strings.ReplaceAll(escapedPassword, "\"", "\\\"")
+	escapedPassword = strings.ReplaceAll(escapedPassword, "$", "\\$")
+	escapedPassword = strings.ReplaceAll(escapedPassword, "`", "\\`")
+	script := fmt.Sprintf("#!/bin/sh\nprintf '%%s\\n' \"%s\"\n", escapedPassword)
 	if err := os.WriteFile(scriptPath, []byte(script), 0o700); err != nil {
 		os.Remove(scriptPath)
 		return "", err

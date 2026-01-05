@@ -4,14 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/vee-sh/veessh/internal/config"
-	"github.com/vee-sh/veessh/internal/connectors"
-	"github.com/vee-sh/veessh/internal/credentials"
 	"github.com/vee-sh/veessh/internal/ui"
 )
 
@@ -48,29 +44,7 @@ var cmdPick = &cobra.Command{
 			fmt.Println(p.Name)
 			return nil
 		}
-		conn, err := connectors.Get(p.Protocol)
-		if err != nil {
-			return err
-		}
-		password, err := credentials.GetPassword(p.Name)
-		if err != nil {
-			// Non-fatal: log but continue (password might not be stored)
-			fmt.Fprintf(os.Stderr, "Warning: failed to retrieve password: %v\n", err)
-		}
-		if err := conn.Exec(cmd.Context(), p, password); err != nil {
-			if errors.Is(err, context.Canceled) {
-				return context.Canceled
-			}
-			return err
-		}
-		// Update usage tracking
-		p.LastUsed = time.Now()
-		p.UseCount++
-		cfg.UpsertProfile(p)
-		if err := config.Save(cfgPath, cfg); err != nil {
-			fmt.Printf("warning: failed to update usage stats: %v\n", err)
-		}
-		return nil
+		return executeConnection(cmd.Context(), p, true)
 	},
 }
 

@@ -6,14 +6,10 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/spf13/cobra"
 
-	"github.com/vee-sh/veessh/internal/audit"
 	"github.com/vee-sh/veessh/internal/config"
-	"github.com/vee-sh/veessh/internal/connectors"
-	"github.com/vee-sh/veessh/internal/credentials"
 	"github.com/vee-sh/veessh/internal/ui"
 	"github.com/vee-sh/veessh/internal/version"
 )
@@ -65,6 +61,7 @@ func addSubcommands() {
 	rootCmd.AddCommand(cmdEditConfig)
 	rootCmd.AddCommand(cmdSetBackend)
 	rootCmd.AddCommand(cmdMigrate)
+	rootCmd.AddCommand(cmdBackends)
 	rootCmd.AddCommand(cmdCompletion)
 	rootCmd.AddCommand(cmdVersion)
 }
@@ -145,39 +142,5 @@ func runInteractive(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	conn, err := connectors.Get(p.Protocol)
-	if err != nil {
-		return err
-	}
-
-	password, err := credentials.GetPassword(p.Name)
-	if err != nil {
-		// Non-fatal: log but continue (password might not be stored)
-		fmt.Fprintf(os.Stderr, "Warning: failed to retrieve password: %v\n", err)
-	}
-
-	// Audit log: connection start
-	startTime := time.Now()
-	audit.LogConnect(p.Name, string(p.Protocol), p.Host, p.Username)
-
-	if err := conn.Exec(cmd.Context(), p, password); err != nil {
-		audit.LogDisconnect(p.Name, string(p.Protocol), p.Host, p.Username, startTime, 1, err)
-		if errors.Is(err, context.Canceled) {
-			return context.Canceled
-		}
-		return err
-	}
-
-	// Audit log: successful disconnect
-	audit.LogDisconnect(p.Name, string(p.Protocol), p.Host, p.Username, startTime, 0, nil)
-
-	// Update usage tracking
-	p.LastUsed = time.Now()
-	p.UseCount++
-	cfg.UpsertProfile(p)
-	if err := config.Save(cfgPath, cfg); err != nil {
-		fmt.Printf("warning: failed to update usage stats: %v\n", err)
-	}
-
-	return nil
+	return executeConnection(cmd.Context(), p, true)
 }

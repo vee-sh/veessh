@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/vee-sh/veessh/internal/config"
 )
@@ -18,6 +19,7 @@ import (
 type FileBackend struct {
 	filePath string
 	key      []byte
+	mu       sync.RWMutex // Protects concurrent access to the password file
 }
 
 // NewFileBackend creates a new file-based backend
@@ -169,6 +171,9 @@ func (f *FileBackend) SetPassword(profileName string, password string) error {
 		return fmt.Errorf("profile name required")
 	}
 
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	passwords, err := f.loadPasswords()
 	if err != nil {
 		return err
@@ -184,6 +189,9 @@ func (f *FileBackend) GetPassword(profileName string) (string, error) {
 	if profileName == "" {
 		return "", fmt.Errorf("profile name required")
 	}
+
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 
 	passwords, err := f.loadPasswords()
 	if err != nil {
@@ -203,6 +211,9 @@ func (f *FileBackend) DeletePassword(profileName string) error {
 	if profileName == "" {
 		return fmt.Errorf("profile name required")
 	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	passwords, err := f.loadPasswords()
 	if err != nil {
