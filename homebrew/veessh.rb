@@ -39,7 +39,7 @@ class Veessh < Formula
   end
 
   def install
-    bin.install "veessh"
+    bin.install "veessh", "veek8s"
 
     # Install shell completions
     generate_completions_from_executable(bin/"veessh", "completion")
