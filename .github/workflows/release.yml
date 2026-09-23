@@ -36,6 +36,8 @@ jobs:
             ldflags="-s -w -X github.com/vee-sh/veessh/internal/version.Version=${VERSION} -X github.com/vee-sh/veessh/internal/version.Commit=${COMMIT} -X github.com/vee-sh/veessh/internal/version.Date=${DATE}"
             GOOS=$os GOARCH=$arch CGO_ENABLED=0 \
               go build -trimpath -ldflags "$ldflags" -o "$outdir/veessh" ./cmd/veessh
+            GOOS=$os GOARCH=$arch CGO_ENABLED=0 \
+              go build -trimpath -ldflags "$ldflags" -o "$outdir/veek8s" ./cmd/veek8s
             tar -C dist -czf "dist/${name}.tar.gz" "$name"
             sha256sum "dist/${name}.tar.gz" > "dist/${name}.tar.gz.sha256"
             rm -rf "$outdir"
@@ -105,9 +107,9 @@ jobs:
             # Extract
             tar -xzf "dist/${name}.tar.gz" -C dist
             # Ad-hoc sign with hardened runtime
-            codesign --sign - --force --options runtime "dist/${name}/veessh"
+            codesign --sign - --force --options runtime "dist/${name}/veessh" "dist/${name}/veek8s"
             # Verify signature
-            codesign --verify --verbose "dist/${name}/veessh"
+            codesign --verify --verbose "dist/${name}/veessh" "dist/${name}/veek8s"
             # Repackage
             tar -C dist -czf "signed/${name}.tar.gz" "${name}"
             shasum -a 256 "signed/${name}.tar.gz" | cut -d' ' -f1 > "signed/${name}.tar.gz.sha256"
@@ -224,7 +226,7 @@ jobs:
             end
           
             def install
-              bin.install "veessh"
+              bin.install "veessh", "veek8s"
           
               # Install shell completions
               generate_completions_from_executable(bin/"veessh", "completion")

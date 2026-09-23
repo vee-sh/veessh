@@ -16,6 +16,7 @@ From source (Go 1.22+):
 
 ```bash
 go install github.com/vee-sh/veessh/cmd/veessh@latest
+go install github.com/vee-sh/veessh/cmd/veek8s@latest
 ```
 
 Or build manually:
@@ -24,6 +25,7 @@ Or build manually:
 git clone https://github.com/vee-sh/veessh.git
 cd veessh
 go build -o veessh ./cmd/veessh
+go build -o veek8s ./cmd/veek8s
 ```
 
 Quick start
@@ -42,6 +44,25 @@ Quick start
 # Or just run veessh to get an interactive picker (like kubie ctx)
 ./veessh
 ```
+
+`veek8s` is a second binary. It switches kube context in the current shell. `kubectl` is not required for that. Each shell gets its own kubeconfig under `~/.config/veek8s/shells`, mode `0600`.
+
+```bash
+vkx() { local out; out=$(veek8s "$@") || return; eval "$out"; }
+vns() { local out; out=$(veek8s ns "$@") || return; eval "$out"; }
+vssh() { veek8s ssh "$@"; }
+
+vkx                 # pick a context
+vkx prod            # switch when one name matches
+vkx -               # previous context
+vns kube-system     # set namespace without calling the API
+vssh                # ssh a node; needs kubectl and ssh
+veek8s nodes
+veek8s save worker-1   # optional veessh profile
+veek8s gc              # delete shell files older than a day
+```
+
+A failed switch prints nothing on stdout, so `eval` cannot apply a partial result. Listing namespaces or nodes needs `kubectl`. Saving a node needs `veessh` on `PATH`.
 
 Key features
 
